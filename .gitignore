@@ -9,9 +9,7 @@
 *.pch
 
 # Executables
-*.exe
 *.out
-*.app
 
 .DS_Store
 *.bak
