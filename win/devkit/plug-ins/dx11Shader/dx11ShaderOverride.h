@@ -36,6 +36,7 @@ public:
 	virtual bool overridesDrawState();
 	virtual bool rebuildAlways();
 	virtual double boundingBoxExtraScale() const;
+	virtual bool overridesNonMaterialItems() const;
 
 private:
 	dx11ShaderOverride(const MObject& obj);

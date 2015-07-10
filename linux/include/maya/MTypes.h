@@ -65,7 +65,7 @@ class MSyntax;
 //
 // will be true in all post 1.0 versions of the API.
 //
-#define MAYA_API_VERSION 201600
+#define MAYA_API_VERSION 201602
 
 #ifdef _WIN32
 

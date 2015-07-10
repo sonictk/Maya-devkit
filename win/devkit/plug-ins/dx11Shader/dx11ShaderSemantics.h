@@ -102,8 +102,20 @@ namespace dx11ShaderSemantic
 	extern const char* kHwFogMode;
 	extern const char* kHwFogStart;
 	extern const char* kHwFogEnd;
-	extern const char* kHwFogDensity;
+	extern const char* kHwFogDensity;	
 	extern const char* kHwFogColor;
+	
+	// Hw selection
+	extern const char* kHwSelectionPrimitiveBase;
+	extern const char* kHwSelectionPrimitiveCountPerInstance;
+	extern const char* kHwSelectionObjectLevel;
+	extern const char* kHwSelectionFaceLevel;
+	extern const char* kHwSelectionEdgeLevel;
+	extern const char* kHwSelectionVertexLevel;
+	extern const char* kHwSelectionOccluder;
+	extern const char* kHwSelectionFrontCCW;
+	extern const char* kHwSelectionInstancedDraw;
+	extern const char* kHwSelectionHighlighting;
 
 	// Maya custom semantics
 	extern const char* kMayaSwatchRender;
@@ -157,7 +169,13 @@ namespace dx11ShaderAnnotation
 	extern const char* kIsTransparent;
 	extern const char* kTransparencyTest;
 	extern const char* kSupportsAdvancedTransparency;
+	extern const char* kOverridesNonMaterialItems;
 	extern const char* kVariableNameAsAttributeName;
+
+	// Pass annotations
+	extern const char* kDrawContext;
+	extern const char* kNonMaterialItemsPass;
+	extern const char* kPrimitiveFilter;
 }
 
 namespace dx11ShaderSemanticValue
@@ -170,6 +188,7 @@ namespace dx11ShaderSemanticValue
 namespace dx11ShaderAnnotationValue
 {
 	extern const char* kNone;
+	extern const char* kTrue;
 
 	extern const char* k1D;
 	extern const char* k2D;
@@ -204,6 +223,9 @@ namespace dx11ShaderAnnotationValue
 	extern const char* kPoint;
 	extern const char* kSpot;
 	extern const char* kDirectional;
+
+	extern const char* kFatLine;
+	extern const char* kFatPoint;
 }
 
 

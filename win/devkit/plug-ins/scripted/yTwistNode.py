@@ -46,10 +46,19 @@ import math, sys
 import maya.OpenMaya as OpenMaya
 import maya.OpenMayaAnim as OpenMayaAnim
 import maya.OpenMayaMPx as OpenMayaMPx
+import maya.cmds as cmds
 
 kPluginNodeTypeName = "spyTwistNode"
 
 yTwistNodeId = OpenMaya.MTypeId(0x8702)
+
+kApiVersion = cmds.about(apiVersion=True)
+if kApiVersion < 201600:
+	outputGeom = OpenMayaMPx.cvar.MPxDeformerNode_outputGeom
+	envelope = OpenMayaMPx.cvar.MPxDeformerNode_envelope
+else:
+	outputGeom = OpenMayaMPx.cvar.MPxGeometryFilter_outputGeom
+	envelope = OpenMayaMPx.cvar.MPxGeometryFilter_envelope
 
 # Node definition
 class yTwistNode(OpenMayaMPx.MPxDeformerNode):
@@ -66,7 +75,6 @@ class yTwistNode(OpenMayaMPx.MPxDeformerNode):
 		angleValue = angleHandle.asDouble()
 		#
 		# get the envelope
-		envelope = OpenMayaMPx.cvar.MPxDeformerNode_envelope
 		envelopeHandle = dataBlock.inputValue( envelope )
 		envelopeValue = envelopeHandle.asFloat()
 		#
@@ -97,7 +105,6 @@ def nodeInitializer():
 	# add attribute
 	try:
 		yTwistNode.addAttribute( yTwistNode.angle )
-		outputGeom = OpenMayaMPx.cvar.MPxDeformerNode_outputGeom
 		yTwistNode.attributeAffects( yTwistNode.angle, outputGeom )
 	except:
 		sys.stderr.write( "Failed to create attributes of %s node\n", kPluginNodeTypeName )

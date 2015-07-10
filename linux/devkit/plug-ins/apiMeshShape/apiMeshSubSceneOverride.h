@@ -21,6 +21,7 @@
 #include <maya/MPxSubSceneOverride.h>
 #include <map>
 #include <set>
+#include <vector>
 
 namespace MHWRender {
 	class MVertexBuffer;
@@ -31,6 +32,9 @@ namespace MHWRender {
 class apiMesh;
 class apiMeshGeom;
 struct ID3D11Buffer;
+namespace apiMeshSubSceneOverrideHelpers {
+	class ShadedItemUserData;
+}
 
 class apiMeshSubSceneOverride : public MHWRender::MPxSubSceneOverride
 {
@@ -62,6 +66,8 @@ public:
 	virtual void updateSelectionGranularity(
 		const MDagPath& path,
 		MHWRender::MSelectionContext& selectionContext);
+
+	void untrackLinkLostData(apiMeshSubSceneOverrideHelpers::ShadedItemUserData* data);
 
 	static MStatus registerComponentConverters();
 	static MStatus deregisterComponentConverters();
@@ -151,5 +157,6 @@ private:
 	std::set<int> fActiveVerticesSet;
 	std::set<int> fActiveEdgesSet;
 	std::set<int> fActiveFacesSet;
+	std::vector<apiMeshSubSceneOverrideHelpers::ShadedItemUserData*> fLinkLostCallbackData;
 };
 

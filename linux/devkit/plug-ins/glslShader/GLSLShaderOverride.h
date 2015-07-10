@@ -42,13 +42,15 @@ public:
 	virtual bool isTransparent();
 	virtual bool supportsAdvancedTransparency() const;
 	virtual bool overridesDrawState();
+	virtual double boundingBoxExtraScale() const;
+	virtual bool overridesNonMaterialItems() const;
 
 	virtual MHWRender::MShaderInstance* shaderInstance() const;
 
 	virtual bool rebuildAlways();
 	
-
 private:
+	double fBBoxExtraScale;
 	bool fShaderBound;
 
 	//GLSLShader associated with the shader override

@@ -252,7 +252,7 @@ class footPrintGeometryOverride(omr.MPxGeometryOverride):
 					# Shaded sole and heel
 					( (footPrintGeometryOverride.shadedHeelItemName_, 
 					    footPrintGeometryOverride.shadedSoleItemName_),
-					omr.MGeometry.kTriangles,
+					omr.MGeometry.kTriangleStrip,
 					omr.MGeometry.kShaded)
 				)
 
@@ -309,6 +309,7 @@ class footPrintGeometryOverride(omr.MPxGeometryOverride):
 
 			# Start position in the index buffer (start of heel or sole positions):
 			startIndex = 0
+			endIndex = 0
 			# Number of index to generate (for line strip, or triangle list)
 			numIndex = 0
 			isWireFrame = True
@@ -319,11 +320,14 @@ class footPrintGeometryOverride(omr.MPxGeometryOverride):
 				startIndex = heelCount
 				numIndex = soleCount
 			elif item.name() == footPrintGeometryOverride.shadedHeelItemName_:
-				numIndex = (heelCount - 2) * 3
+				numIndex = heelCount - 2
+				startIndex = 1
+				endIndex = heelCount - 2
 				isWireFrame = False
 			elif item.name() == footPrintGeometryOverride.shadedSoleItemName_:
 				startIndex = heelCount
-				numIndex = (soleCount - 2) * 3
+				endIndex = heelCount + soleCount - 2
+				numIndex = soleCount - 2
 				isWireFrame = False
 
 			if numIndex:
@@ -338,15 +342,11 @@ class footPrintGeometryOverride(omr.MPxGeometryOverride):
 						indices[i] = startIndex + i
 						i += 1
 					else:
-						# Triangle list corresponding to a triangle fan covering the surface:
-						#	0 1 2
-						#	0 2 3
-						#	0 3 4
-						#	...
-						indices[i] = startIndex
-						indices[i+1] = startIndex + i/3 + 1
-						indices[i+2] = startIndex + i/3 + 2
-						i += 3
+						# Triangle strip
+						indices[i] = startIndex + i/2
+						if i+1 < numIndex:
+							indices[i+1] = endIndex - i/2
+						i += 2
 
 				indexBuffer.commit(indicesAddress)
 				item.associateWithIndexBuffer(indexBuffer)

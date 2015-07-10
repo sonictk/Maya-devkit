@@ -133,12 +133,16 @@ namespace glslShaderAnnotation
 
 	// Define if the technique should follow the Maya transparent object rendering or is self-managed (multi-passes)
 	const char* kOverridesDrawState						= "overridesDrawState";
+	const char* kExtraScale								= "extraScale";
+	const char* kOverridesNonMaterialItems				= "overridesNonMaterialItems";
 
 	// Allow the shader writer to force the variable name to become the attribute name, even if UIName annotation is used
 	const char* kVariableNameAsAttributeName			= "VariableNameAsAttributeName";
 
 	// Pass annotations
 	const char* kDrawContext							= "drawContext";
+	const char* kNonMaterialItemsPass					= "nonMaterialItemsPass";
+	const char* kPrimitiveFilter						= "primitiveFilter";
 
 	// Uniform annotations
 	const char* kUIMin									= "UIMin";
@@ -201,4 +205,8 @@ namespace glslShaderAnnotationValue
 
 	// Supported value for the kSasUiControl annotation
 	const char* kColorPicker							= "ColorPicker";
+
+	// Supported value for kPrimitiveFilter annotation
+	const char* kFatLine								= "fatLine";
+	const char* kFatPoint								= "fatPoint";
 }

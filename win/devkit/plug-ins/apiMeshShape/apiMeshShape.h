@@ -221,6 +221,7 @@ public:
 
 private:
 	void					signalDirtyToViewport();
+	MObject					convertToVertexComponent(const MObject& components);
 
 	bool fHasHistoryOnCreate;
 	bool fShapeDirty;

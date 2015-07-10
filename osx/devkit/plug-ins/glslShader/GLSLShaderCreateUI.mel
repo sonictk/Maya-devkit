@@ -37,7 +37,7 @@ global proc prefsFrameLayoutCreateGLSLShader()
 
 global proc prefsSetOptVarToDefaultGLSLShader()
 {
-	optionVar -sv "GLSLShaderDefaultEffect" "";
+	optionVar -sv "GLSLShaderDefaultEffect" "AutodeskUberShader.ogsfx";
 }
 
 global proc GLSLShaderRefreshValueCtrls()

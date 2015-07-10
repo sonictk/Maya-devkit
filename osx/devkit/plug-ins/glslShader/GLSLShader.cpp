@@ -66,6 +66,7 @@
 #include <iostream>
 #include <sstream>
 #include <algorithm>
+#include <list>
 
 #if defined(OSLinux_) || defined(OSMac_)
 #include <strings.h>
@@ -687,16 +688,42 @@ PostSceneUpdateAttributeRefresher *PostSceneUpdateAttributeRefresher::sInstance 
 
 GLSLShaderNode::GLSLShaderNode()
 :	fEffectLoaded(false)
-,	fNeedsRebuild(false)
 ,	fGLSLShaderInstance(NULL)
 ,	fTechniqueName("Main")
 ,	fTechniqueIdx(-1)
+,	fTechniqueIsSelectable(false)
 ,	fTechniqueIsTransparent(false)
 ,	fTechniqueSupportsAdvancedTransparency(false)
 ,	fTechniqueOverridesDrawState(false)
 ,	fTechniqueTextureMipmapLevels(0)
+,	fTechniqueBBoxExtraScale(1.0)
+,	fTechniqueOverridesNonMaterialItems(false)
+,	fTechniquePassCount(0)
+,	fTechniquePassSpecs()
 ,	fLastFrameStamp((MUint64)-1)
 {
+	static bool s_addResourcePath = true;
+	if (s_addResourcePath)
+	{
+		MHWRender::MRenderer* renderer = MHWRender::MRenderer::theRenderer();
+		if (renderer)
+		{
+			const MString resourceLocation = MString("${MAYA_LOCATION}/presets/GLSL/examples").expandEnvironmentVariablesAndTilde();
+
+			MHWRender::MTextureManager* textureMgr = renderer->getTextureManager();
+			if (textureMgr) {
+				textureMgr->addImagePath( resourceLocation );
+			}
+
+			const MHWRender::MShaderManager* shaderMgr = renderer->getShaderManager();
+			if (shaderMgr) {
+				shaderMgr->addShaderPath( resourceLocation );
+				shaderMgr->addShaderIncludePath( resourceLocation );
+			}
+		}
+
+		s_addResourcePath = false;
+	}
 }
 
 GLSLShaderNode::~GLSLShaderNode()
@@ -1052,6 +1079,7 @@ bool GLSLShaderNode::loadEffect(const MString& effectName)
 		return true;
 	}
 
+#if 0
 	//if (MFileIO::isReadingFile() || MFileIO::isOpeningFile())
 	{
 		MFileObject file;
@@ -1064,6 +1092,7 @@ bool GLSLShaderNode::loadEffect(const MString& effectName)
 			return false;
 		}
 	}
+#endif
 
 	// Tell Maya that we want access/control to all uniform parameters
 	// by default Maya handles parameters with 'system' semantics such as LIGHTCOLOR
@@ -1085,6 +1114,7 @@ bool GLSLShaderNode::loadEffect(const MString& effectName)
 
 	// Get preferred technique
 	MString techniqueName;
+	int techniqueIdx = -1;
 	if (fTechniqueName.length() > 0)
 	{
 		for (unsigned int i = 0; i < techniqueNames.length(); ++i)
@@ -1092,18 +1122,26 @@ bool GLSLShaderNode::loadEffect(const MString& effectName)
 			if (techniqueNames[i] == fTechniqueName)
 			{
 				techniqueName = fTechniqueName;
+				techniqueIdx = i;
 				break;
 			}
 		}
 	}
 	// If not found use first
-	if (techniqueName.length() == 0)
+	if (techniqueName.length() == 0) {
 		techniqueName = techniqueNames[0];
+		techniqueIdx = 0;
+	}
 
 	// Do not use cache here, in case we want to recompiling a shader that has been modified after loading.
 	MHWRender::MShaderInstance* newInstance = shaderMgr->getEffectsFileShader(effectName, techniqueName, macros, nbMacros, false);
 	if (newInstance)
 	{	
+		// Reset current light connections,	that will unlock light parameters so that their uniform attributes can be properly removed if not reused
+		// Do not refresh AE, it's done on idle and the attribute may not exist anymore. The AE will be refreshed later on anyway
+		clearLightConnectionData(false /*refreshAE*/);
+		fLightParameters.clear();
+
 		// Effect loaded successfuly, let's replace the previous one
 		if (fGLSLShaderInstance != NULL)
 			shaderMgr->releaseShader(fGLSLShaderInstance);
@@ -1112,11 +1150,42 @@ bool GLSLShaderNode::loadEffect(const MString& effectName)
 		fEffectName = effectName;
 		fTechniqueNames = techniqueNames;
 		fTechniqueName = techniqueName;
+		fTechniqueIdx = techniqueIdx;
 
 		MPlug descriptionPlug( thisMObject(), sDescription);
 		descriptionPlug.setValue( "" );
 
 		MStatus opStatus;
+
+		// Build list of techniques pass specs and determine Selectable status
+		fTechniqueIsSelectable = false;
+		fTechniquePassCount = 0;
+		fTechniquePassSpecs.clear();
+		{
+			MHWRender::MDrawContext* context = MHWRender::MRenderUtilities::acquireSwatchDrawContext();
+			if(context)
+			{
+				newInstance->bind(*context);
+
+				fTechniquePassCount = newInstance->getPassCount(*context);
+				for (unsigned int passIndex = 0; passIndex < fTechniquePassCount; ++passIndex)
+				{
+					const MString passDrawContext = newInstance->passAnnotationAsString(passIndex, glslShaderAnnotation::kDrawContext, opStatus);
+					if (STRICMP(passDrawContext.asChar(), MHWRender::MPassContext::kSelectionPassSemantic.asChar()) == 0)
+						fTechniqueIsSelectable = true;
+
+					const MString passPrimitiveFilter = newInstance->passAnnotationAsString(passIndex, glslShaderAnnotation::kPrimitiveFilter, opStatus);
+					const bool passIsForFatLine  = (STRICMP(passPrimitiveFilter.asChar(), glslShaderAnnotationValue::kFatLine) == 0);
+					const bool passIsForFatPoint = (STRICMP(passPrimitiveFilter.asChar(), glslShaderAnnotationValue::kFatPoint) == 0);
+
+					PassSpec spec = { passDrawContext, passIsForFatLine, passIsForFatPoint };
+					fTechniquePassSpecs.insert( std::make_pair(passIndex, spec) );
+				}
+
+				newInstance->unbind(*context);
+				MHWRender::MRenderUtilities::releaseDrawContext(context);
+			}
+		}
 
 		// Setup Transparency using technique annotation
 		fTechniqueIsTransparent = false;
@@ -1141,7 +1210,7 @@ bool GLSLShaderNode::loadEffect(const MString& effectName)
 		{
 			fTechniqueIndexBufferType = indexBufferType;
 
-			// Use our own crack free primitive generators - we known they are registered
+			// Use our own crack free primitive generators - we know they are registered
 			if( fTechniqueIndexBufferType == "PNAEN18" )
 				fTechniqueIndexBufferType = "GLSL_PNAEN18";
 			else if( fTechniqueIndexBufferType == "PNAEN9" )
@@ -1164,11 +1233,26 @@ bool GLSLShaderNode::loadEffect(const MString& effectName)
 			fTechniqueTextureMipmapLevels = textureMipMapLevels;
 		}
 
+		// Query technique bbox extra scale
+		fTechniqueBBoxExtraScale = 1.0;
+		const double extraScale = (double) fGLSLShaderInstance->techniqueAnnotationAsFloat(glslShaderAnnotation::kExtraScale, opStatus);
+		if (opStatus == MStatus::kSuccess)
+		{
+			fTechniqueBBoxExtraScale = extraScale;
+		}
+
+		// Query technique if it overrides non material items items
+		fTechniqueOverridesNonMaterialItems = false;
+		MString overridesNonMaterialItems = fGLSLShaderInstance->techniqueAnnotationAsString(glslShaderAnnotation::kOverridesNonMaterialItems, opStatus);
+		if (opStatus == MStatus::kSuccess)
+		{
+			fTechniqueOverridesNonMaterialItems = (STRICMP(overridesNonMaterialItems.asChar(), glslShaderAnnotationValue::kValueTrue)==0);
+		}
 		configureUniforms();
+		configureGeometryRequirements();
 
 		fTechniqueEnumAttr = buildTechniqueEnumAttribute(*this);
 
-		fNeedsRebuild = true;
 		fEffectLoaded = true;
 
 		// Refresh any AE that monitors implicit lights:
@@ -1219,10 +1303,17 @@ void GLSLShaderNode::clearParameters()
 	fLightParameters.clear();
 
 	fUniformParameters.setLength(0);
-	setUniformParameters( fUniformParameters );
+	setUniformParameters( fUniformParameters, false );
 	deleteUniformUserData();
 
+	fGeometryRequirements.clear();
+	fVaryingParameters.setLength(0);
+	setVaryingParameters( fVaryingParameters, false );
+	fVaryingParametersUpdateId = 0;
+
 	fTechniqueIndexBufferType.clear();
+	fTechniquePassSpecs.clear();
+	fTechniqueIdx = -1;
 
 	fUIGroupNames.setLength(0);
 	fUIGroupParameters.clear();
@@ -1367,6 +1458,8 @@ void GLSLShaderNode::configureUniforms()
 {
 	fUniformParameters.setLength(0);
 	deleteUniformUserData();
+	fUIGroupNames.setLength(0);
+	fUIGroupParameters.clear();
 
 	MStatus opStatus;
 
@@ -1594,22 +1687,21 @@ void GLSLShaderNode::configureUniforms()
 				const MString resourceName = fGLSLShaderInstance->resourceName(paramName, opStatus);
 				if (opStatus == MStatus::kSuccess)
 				{
-					MStringArray strArray;
-					resourceName.split(':',strArray);
-					if (strArray.length() > 0)
+					if( MFileObject::isAbsolutePath(resourceName) )
 					{
-						if (strArray.length() > 1)
-						{
-							//if ResourceName is a full path, retain it as is
-							uniParam.setAsString(resourceName);
-						}
-						else
-						{
-							std::string effNameStr(fEffectName.asChar());
-							std::string pathStr = effNameStr.substr(0, effNameStr.find_last_of("\\/"));
-							MString fullPathMStr = MString(pathStr.c_str()) + "/" + resourceName; 
-							uniParam.setAsString(fullPathMStr.asWChar());
-						}
+						//if ResourceName is a full path, retain it as is
+						uniParam.setAsString(resourceName);
+					}
+					else if( MFileObject::isAbsolutePath(fEffectName) )
+					{
+						MFileObject fileObj;
+						fileObj.setRawFullName(fEffectName);
+
+						uniParam.setAsString(fileObj.rawPath() + MString("/") + resourceName);
+					}
+					else
+					{
+						uniParam.setAsString(resourceName);
 					}
 				}
 				break;
@@ -1686,6 +1778,164 @@ void GLSLShaderNode::configureUniforms()
 	updateImplicitLightParameterCache();
 }
 
+void GLSLShaderNode::configureGeometryRequirements()
+{
+	fVaryingParameters.setLength(0);
+	fVaryingParametersUpdateId = 0;
+
+	std::list<MHWRender::MGeometry::Semantic> semanticUsage;
+
+	fGeometryRequirements.clear();
+	fGLSLShaderInstance->requiredVertexBuffers( fGeometryRequirements );
+
+	// No set/update available in MVertexBufferDescriptorList :
+	// go from top and push a new descriptor while removing the top
+	const int nbReq = fGeometryRequirements.length();
+	for( int i = 0; i < nbReq; ++i )
+	{
+		MHWRender::MVertexBufferDescriptor vbDesc;
+		fGeometryRequirements.getDescriptor(0, vbDesc);
+
+		const MString semanticName = vbDesc.semanticName();
+		const int dimension = vbDesc.dimension();
+
+		MVaryingParameter::MVaryingParameterType dataType = MVaryingParameter::kInvalidParameter;
+		switch( vbDesc.dataType() )
+		{
+			case MHWRender::MGeometry::kFloat:
+				dataType = MVaryingParameter::kFloat;
+				break;
+			case MHWRender::MGeometry::kDouble:
+				dataType = MVaryingParameter::kDouble;
+				break;
+			case MHWRender::MGeometry::kChar:
+				dataType = MVaryingParameter::kChar;
+				break;
+			case MHWRender::MGeometry::kUnsignedChar:
+				dataType = MVaryingParameter::kUnsignedChar;
+				break;
+			case MHWRender::MGeometry::kInt16:
+				dataType = MVaryingParameter::kInt16;
+				break;
+			case MHWRender::MGeometry::kUnsignedInt16:
+				dataType = MVaryingParameter::kUnsignedInt16;
+				break;
+			case MHWRender::MGeometry::kInt32:
+				dataType = MVaryingParameter::kInt32;
+				break;
+			case MHWRender::MGeometry::kUnsignedInt32:
+				dataType = MVaryingParameter::kUnsignedInt32;
+				break;
+			default:
+				break;
+		}
+
+		const unsigned int usageCount = (unsigned int) std::count(semanticUsage.begin(), semanticUsage.end(), vbDesc.semantic());
+		semanticUsage.push_back( vbDesc.semantic() );
+
+		MVaryingParameter::MVaryingParameterSemantic semantic = MVaryingParameter::kNoSemantic;
+		MString uiName;
+		MString sourceSet;
+		switch( vbDesc.semantic() )
+		{
+			case MHWRender::MGeometry::kPosition:
+				semantic = MVaryingParameter::kPosition;
+				uiName = glslShaderSemantic::kPosition;
+				break;
+			case MHWRender::MGeometry::kNormal:
+				semantic = MVaryingParameter::kNormal;
+				uiName = glslShaderSemantic::kNormal;
+				break;
+			case MHWRender::MGeometry::kTexture:
+				semantic = MVaryingParameter::kTexCoord;
+				uiName = glslShaderSemantic::kTexCoord;
+				uiName += usageCount;
+
+				sourceSet = "map";
+				sourceSet += (usageCount+1);
+				break;
+			case MHWRender::MGeometry::kColor:
+				semantic = MVaryingParameter::kColor;
+				uiName = glslShaderSemantic::kColor;
+				uiName += usageCount;
+
+				sourceSet = "colorSet";
+				if( usageCount > 0 ) {
+					sourceSet += usageCount;
+				}
+				break;
+			case MHWRender::MGeometry::kTangent:
+				semantic = MVaryingParameter::kTangent;
+				uiName = glslShaderSemantic::kTangent;
+				break;
+			case MHWRender::MGeometry::kBitangent:
+				semantic = MVaryingParameter::kBinormal;
+				uiName = glslShaderSemantic::kBinormal;
+				break;
+			default:
+				break;
+		}
+
+		MVaryingParameter varying(
+			uiName,
+			dataType,
+			dimension, //minDimension,
+			dimension, //maxDimension,
+			dimension,
+			semantic,
+			sourceSet,
+			false, // invertTexCoords
+			semanticName);
+		fVaryingParameters.append(varying);
+
+		// Set desired source set as name of the buffer descriptor
+		vbDesc.setName(sourceSet);
+
+		// Remove old and append updated descriptor
+		fGeometryRequirements.removeAt(0);
+		fGeometryRequirements.append(vbDesc);
+	}
+
+	setVaryingParameters(fVaryingParameters, true);
+}
+
+bool GLSLShaderNode::hasUpdatedVaryingInput() const
+{
+	// Test if varying parameters have changed
+	unsigned int varyingUpdateId = 0;
+	for( int i = 0; i < fVaryingParameters.length(); ++i) {
+		MVaryingParameter varying = fVaryingParameters.getElement(i);
+		varyingUpdateId += varying.getUpdateId();
+	}
+
+	return (fVaryingParametersUpdateId != varyingUpdateId);
+}
+
+void GLSLShaderNode::updateGeometryRequirements()
+{
+	unsigned int varyingUpdateId = 0;
+
+	// No set/update available in MVertexBufferDescriptorList :
+	// go from top and push a new descriptor while removing the top
+	const int nbReq = fGeometryRequirements.length();
+	for( int i = 0; i < nbReq; ++i )
+	{
+		MHWRender::MVertexBufferDescriptor vbDesc;
+		fGeometryRequirements.getDescriptor(0, vbDesc);
+
+		MVaryingParameter varying = fVaryingParameters.getElement(i);
+		varyingUpdateId += varying.getUpdateId();
+
+		// Update source set
+		vbDesc.setName(varying.getSourceSetName());
+
+		// Remove old and append updated descriptor
+		fGeometryRequirements.removeAt(0);
+		fGeometryRequirements.append(vbDesc);
+	}
+
+	fVaryingParametersUpdateId = varyingUpdateId;
+}
 
 const MRenderProfile& GLSLShaderNode::profile()
 {
@@ -1755,6 +2005,11 @@ void GLSLShaderNode::updateParameters(const MHWRender::MDrawContext& context, ER
 		updateViewParams = (currentFrameStamp != fLastFrameStamp);
 		fLastFrameStamp = currentFrameStamp;
 		//fForceUpdateTexture = false;
+
+		const MHWRender::MPassContext & passCtx = context.getPassContext();
+		const MStringArray & passSem = passCtx.passSemantics();
+		if (passSem.length() == 1 && passSem[0] == MHWRender::MPassContext::kSelectionPassSemantic)
+			updateLightParameters = false;
 	}
 	else if(renderType == RENDER_SWATCH)
 	{
@@ -1817,12 +2072,24 @@ void GLSLShaderNode::updateParameters(const MHWRender::MDrawContext& context, ER
 			parameterName = uniformUserDataToMString(currentUniform.userData());
 		}
 
-		//TODO: The following (commented) line is not allowing light to update when changed, fix and uncomment when you can
-		//if( currentUniform.hasChanged(context) || lightParametersToUpdate.count(i) || (currentUniform.isATexture()) )
+		if( currentUniform.hasChanged(context) || lightParametersToUpdate.count(i) || (currentUniform.isATexture()) )
 		{
 			switch (currentUniform.type())
 			{
 			case MUniformParameter::kTypeFloat:
+				if (currentUniform.semantic() == MUniformParameter::kSemanticViewportPixelSize)
+				{
+					// Temporary patch until GEC-660 is fixed
+					{
+						static const float resetData[] = { (float)-1, (float)-1 };
+						fGLSLShaderInstance->setParameter(parameterName, resetData);
+					}
+					int width, height;
+					context.getRenderTargetSize(width, height);
+					const float data[] = { (float)width, (float)height };
+					fGLSLShaderInstance->setParameter(parameterName, data);
+				}
+				else
 				{
 					const float* data = currentUniform.getAsFloatArray(context);
 
@@ -1892,6 +2159,49 @@ void GLSLShaderNode::updateParameters(const MHWRender::MDrawContext& context, ER
 
 		}
 	}
+}
+
+void GLSLShaderNode::updateOverrideNonMaterialItemParameters(const MHWRender::MDrawContext& context, const MHWRender::MRenderItem* item, RenderItemDesc& renderItemDesc) const
+{
+	if(!fGLSLShaderInstance)
+		return;
+
+	if (!item || item->type() != MHWRender::MRenderItem::OverrideNonMaterialItem)
+		return;
+
+	renderItemDesc.isOverrideNonMaterialItem = true;
+
+	unsigned int size;
+	{
+		static const MString defaultColorParameter("defaultColor");
+		const float* defaultColor = item->getShaderFloatArrayParameter(defaultColorParameter, size);
+		if(defaultColor && size == 4) {
+			static const MString solidColorUniform("gsSolidColor");
+			fGLSLShaderInstance->setParameter(solidColorUniform, defaultColor);
+		}
+	}
+
+	const MHWRender::MGeometry::Primitive primitive = item->primitive();
+	if( primitive == MHWRender::MGeometry::kLines || primitive == MHWRender::MGeometry::kLineStrip ) {
+		static const MString lineWidthParameter("lineWidth");
+		const float* lineWidth = item->getShaderFloatArrayParameter(lineWidthParameter, size);
+		if(lineWidth && size == 2 && lineWidth[0] > 1.f && lineWidth[1] > 1.f) {
+			static const MString fatLineWidthUniform("gsFatLineWidth");
+			fGLSLShaderInstance->setParameter(fatLineWidthUniform, lineWidth);
+			renderItemDesc.isFatLine = true;
+		}
+	}
+	else if( primitive == MHWRender::MGeometry::kPoints ) {
+		static const MString pointSizeParameter("pointSize");
+		const float* pointSize = item->getShaderFloatArrayParameter(pointSizeParameter, size);
+		if(pointSize && size == 2 && pointSize[0] > 1.f && pointSize[1] > 1.f) {
+			static const MString fatPointSizeUniform("gsFatPointSize");
+			fGLSLShaderInstance->setParameter(fatPointSizeUniform, pointSize);
+			renderItemDesc.isFatPoint = true;
+		}
+	}
+
+	fGLSLShaderInstance->updateParameters(context);
 }
 
 void GLSLShaderNode::getExternalContent(MExternalContentInfoTable& table) const
@@ -3065,7 +3375,7 @@ void GLSLShaderNode::refreshView() const
 
 	This function locks and unlocks light parameters as connection come and go:
 */
-void GLSLShaderNode::setLightParameterLocking(const LightParameterInfo& lightInfo, bool locked) const
+void GLSLShaderNode::setLightParameterLocking(const LightParameterInfo& lightInfo, bool locked, bool refreshAE) const
 {
 	for (LightParameterInfo::TConnectableParameters::const_iterator idxIter=lightInfo.fConnectableParameters.begin();
 		idxIter != lightInfo.fConnectableParameters.end();
@@ -3081,8 +3391,10 @@ void GLSLShaderNode::setLightParameterLocking(const LightParameterInfo& lightInf
 			if (!uniformAttribute.isHidden()) {
 				uniformPlug.setLocked(locked);
 
-				// When the locking is done during the render, the AE is not always properly refreshed
-				MGlobal::executeCommandOnIdle(MString("setAttr \"") + uniformPlug.name() + MString("\" -lock ") + (locked ? MString("true") : MString("false")) + MString(";") );
+				if( refreshAE ) {
+					// When the locking is done during the render, the AE is not always properly refreshed
+					MGlobal::executeCommandOnIdle(MString("setAttr \"") + uniformPlug.name() + MString("\" -lock ") + (locked ? MString("true") : MString("false")) + MString(";") );
+				}
 			}
 		}
 	}
@@ -3414,12 +3726,14 @@ MStatus GLSLShaderNode::setDependentsDirty(const MPlug & plugBeingDirtied, MPlug
 		LightParameterInfo& shaderLightInfo = fLightParameters[shaderLightIndex];
 
 		MPlug implicitLightPlug(thisMObject(), shaderLightInfo.fAttrUseImplicit);
-		if ( implicitLightPlug == plugBeingDirtied )
+		if ( implicitLightPlug == plugBeingDirtied ) {
 			shaderLightInfo.fIsDirty = true;
+		}
 
 		MPlug connectedLightPlug(thisMObject(), shaderLightInfo.fAttrConnectedLight);
-		if ( connectedLightPlug == plugBeingDirtied )
+		if ( connectedLightPlug == plugBeingDirtied ) {
 			shaderLightInfo.fIsDirty = true;
+		}
 	}
 
 	return MPxHardwareShader::setDependentsDirty(plugBeingDirtied, affectedPlugs);
@@ -3438,11 +3752,19 @@ MStatus GLSLShaderNode::setDependentsDirty(const MPlug & plugBeingDirtied, MPlug
 */
 void GLSLShaderNode::getLightParametersToUpdate(std::set<int>& parametersToUpdate, ERenderType renderType) const
 {
+	MFnDependencyNode thisDependNode;
+	thisDependNode.setObject(thisMObject());
+
 	for(size_t shaderLightIndex = 0; shaderLightIndex < fLightParameters.size(); ++shaderLightIndex )
 	{
 		const LightParameterInfo& shaderLightInfo = fLightParameters[shaderLightIndex];
 
-		if (shaderLightInfo.fIsDirty || renderType != RENDER_SCENE)
+		bool needUpdate = (shaderLightInfo.fIsDirty || renderType != RENDER_SCENE);
+		if(!needUpdate) {
+			MPlug thisLightConnectionPlug = thisDependNode.findPlug(shaderLightInfo.fAttrConnectedLight, true);
+			needUpdate = thisLightConnectionPlug.isConnected();
+		}
+		if (needUpdate)
 		{
 			LightParameterInfo::TConnectableParameters::const_iterator it = shaderLightInfo.fConnectableParameters.begin();
 			LightParameterInfo::TConnectableParameters::const_iterator itEnd = shaderLightInfo.fConnectableParameters.end();
@@ -3473,12 +3795,12 @@ void GLSLShaderNode::getLightParametersToUpdate(std::set<int>& parametersToUpdat
 
 
 
-void GLSLShaderNode::clearLightConnectionData()
+void GLSLShaderNode::clearLightConnectionData(bool refreshAE)
 {
 	// Unlock all light parameters.
 	for (size_t i = 0; i < fLightParameters.size(); ++i) {
 		fLightParameters[i].fCachedImplicitLight = MObject();
-		setLightParameterLocking(fLightParameters[i], false);
+		setLightParameterLocking(fLightParameters[i], false, refreshAE);
 	}
 
 	fLightNames.setLength(0);
@@ -3545,50 +3867,103 @@ MString GLSLShaderNode::getLightConnectionInfo(int lightIndex)
 	return "";
 }
 
-bool GLSLShaderNode::passHandlesContext(MHWRender::MDrawContext& context, int passIndex) const
+bool GLSLShaderNode::techniqueHandlesContext(MHWRender::MDrawContext& context) const
 {
-	if (!fGLSLShaderInstance)
+	for (unsigned int passIndex = 0; passIndex < fTechniquePassCount; ++passIndex)
+	{
+		if( passHandlesContext(context, passIndex) )
+			return true;
+	}
+	return false;
+}
+
+bool GLSLShaderNode::passHandlesContext(MHWRender::MDrawContext& context, unsigned int passIndex, const RenderItemDesc* renderItemDesc) const
+{
+	PassSpecMap::const_iterator it = fTechniquePassSpecs.find(passIndex);
+	if (it == fTechniquePassSpecs.end())
 		return false;
-
-	bool isHandled = false;
-
-	MStatus status;
-	const MString passDrawContext = fGLSLShaderInstance->passAnnotationAsString(passIndex, glslShaderAnnotation::kDrawContext, status);
-	const bool passHasDrawContext = (passDrawContext.length() > 0);
+	const PassSpec& passSpec = it->second;
 
 	const MHWRender::MPassContext & passCtx = context.getPassContext();
 	const MStringArray & passSemantics = passCtx.passSemantics();
 
-	for (unsigned int i = 0; i < passSemantics.length() && !isHandled; ++i)
+	bool isHandled = false;
+	for (unsigned int passSemIdx = 0; passSemIdx < passSemantics.length() && !isHandled; ++passSemIdx)
 	{
-		const MString& semantic = passSemantics[i];
+		const MString& semantic = passSemantics[passSemIdx];
 
 		// For color passes, only handle if there isn't already
 		// a global override. This is the same as the default
 		// logic for this method in MPxShaderOverride
 		//
-		if (semantic == MHWRender::MPassContext::kColorPassSemantic)
+		const bool isColorPass = (semantic == MHWRender::MPassContext::kColorPassSemantic);
+		if (isColorPass)
 		{
 			if (!passCtx.hasShaderOverride())
 			{
-				isHandled = !passHasDrawContext || (STRICMP(semantic.asChar(), passDrawContext.asChar()) == 0);
+				if(renderItemDesc && renderItemDesc->isOverrideNonMaterialItem)
+				{
+					isHandled = (STRICMP(passSpec.drawContext.asChar(), glslShaderAnnotation::kNonMaterialItemsPass) == 0);
+				}
+				else
+				{
+					isHandled = (passSpec.drawContext.length() == 0) || (STRICMP(semantic.asChar(), passSpec.drawContext.asChar()) == 0);
+				}
 			}
 		}
-
-		// Handle special pass drawing.
-		//
-		else if (semantic == MHWRender::MPassContext::kShadowPassSemantic ||
-				 semantic == MHWRender::MPassContext::kDepthPassSemantic ||
-				 semantic == MHWRender::MPassContext::kNormalDepthPassSemantic ||
-				 semantic == MHWRender::MPassContext::kTransparentPeelSemantic ||
-				 semantic == MHWRender::MPassContext::kTransparentPeelAndAvgSemantic ||
-				 semantic == MHWRender::MPassContext::kTransparentWeightedAvgSemantic)
+		else
 		{
-			isHandled = passHasDrawContext && (STRICMP(semantic.asChar(), passDrawContext.asChar()) == 0);
+			isHandled = (STRICMP(semantic.asChar(), passSpec.drawContext.asChar()) == 0);
+		}
+
+		if (isHandled && renderItemDesc && renderItemDesc->isOverrideNonMaterialItem)
+		{
+			if (renderItemDesc->isFatLine)
+			{
+				if (!passSpec.forFatLine)
+				{
+					// This pass is not meant for fat line,
+					// accept only if there is no pass with the same drawContext which handles fat line
+					const PassSpec passSpecTest = { passSpec.drawContext, true, false };
+					isHandled = (findMatchingPass(context, passSpecTest) == (unsigned int)-1);
+				}
+			}
+			else if (renderItemDesc->isFatPoint)
+			{
+				if (!passSpec.forFatPoint)
+				{
+					// This pass is not meant for fat point,
+					// accept only if there is no pass with the same drawContext which handles fat point
+					const PassSpec passSpecTest = { passSpec.drawContext, false, true };
+					isHandled = (findMatchingPass(context, passSpecTest) == (unsigned int)-1);
+				}
+			}
+			else
+			{
+				isHandled = (!passSpec.forFatLine && !passSpec.forFatPoint);
+			}
 		}
 	}
 
 	return isHandled;
+}
+
+unsigned int GLSLShaderNode::findMatchingPass(MHWRender::MDrawContext& context, const PassSpec& passSpecTest) const
+{
+	PassSpecMap::const_iterator it = fTechniquePassSpecs.begin();
+	PassSpecMap::const_iterator itEnd = fTechniquePassSpecs.end();
+	for(; it != itEnd; ++it)
+	{
+		const PassSpec& passSpec = it->second;
+		if( passSpec.forFatLine == passSpecTest.forFatLine &&
+			passSpec.forFatPoint == passSpecTest.forFatPoint &&
+			STRICMP(passSpec.drawContext.asChar(), passSpecTest.drawContext.asChar()) == 0)
+		{
+			return it->first;
+		}
+	}
+
+	return (unsigned int) -1;
 }
 
 /*

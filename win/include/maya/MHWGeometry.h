@@ -254,6 +254,7 @@ private:
 
 	friend class MRenderItem;
 	friend class MGeometryRequirements;
+	friend class MShaderInstance;
 };
 
 // ****************************************************************************
@@ -865,6 +866,7 @@ private:
     MIndexBufferDescriptorList fIndexRequirements;
 
 	friend class MRenderItem;
+	friend class MShaderInstance;
 };
 
 } // namespace MHWRender

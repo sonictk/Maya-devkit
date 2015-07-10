@@ -631,6 +631,17 @@ MUniformParameter::DataSemantic CUniformParameterBuilder::convertSemantic( )
 		else if( !_stricmp( mDesc.Semantic, dx11ShaderSemantic::kTranspDepthTexture))					paramSemantic = MUniformParameter::kSemanticTranspDepthTexture;
 		else if( !_stricmp( mDesc.Semantic, dx11ShaderSemantic::kOpaqueDepthTexture))					paramSemantic = MUniformParameter::kSemanticOpaqueDepthTexture;
 
+		else if( !_stricmp( mDesc.Semantic, dx11ShaderSemantic::kHwSelectionPrimitiveBase))				paramSemantic = MUniformParameter::kSemanticHWSPrimitiveBase;
+		else if( !_stricmp( mDesc.Semantic, dx11ShaderSemantic::kHwSelectionPrimitiveCountPerInstance))	paramSemantic = MUniformParameter::kSemanticHWSPrimitiveCountPerInstance;
+		else if( !_stricmp( mDesc.Semantic, dx11ShaderSemantic::kHwSelectionObjectLevel))				paramSemantic = MUniformParameter::kSemanticHWSObjectLevel;
+		else if( !_stricmp( mDesc.Semantic, dx11ShaderSemantic::kHwSelectionFaceLevel))					paramSemantic = MUniformParameter::kSemanticHWSFaceLevel;
+		else if( !_stricmp( mDesc.Semantic, dx11ShaderSemantic::kHwSelectionEdgeLevel))					paramSemantic = MUniformParameter::kSemanticHWSEdgeLevel;
+		else if( !_stricmp( mDesc.Semantic, dx11ShaderSemantic::kHwSelectionVertexLevel))				paramSemantic = MUniformParameter::kSemanticHWSVertexLevel;
+		else if( !_stricmp( mDesc.Semantic, dx11ShaderSemantic::kHwSelectionOccluder))					paramSemantic = MUniformParameter::kSemanticHWSOccluder;
+		else if( !_stricmp( mDesc.Semantic, dx11ShaderSemantic::kHwSelectionFrontCCW))					paramSemantic = MUniformParameter::kSemanticHWSFrontCCW;
+		else if( !_stricmp( mDesc.Semantic, dx11ShaderSemantic::kHwSelectionInstancedDraw))				paramSemantic = MUniformParameter::kSemanticHWSInstancedDraw;
+		else if( !_stricmp( mDesc.Semantic, dx11ShaderSemantic::kHwSelectionHighlighting))				paramSemantic = MUniformParameter::kSemanticHWSHighlighting;
+
 		else
 		{
 			logUnrecognisedSemantic(mDesc.Semantic);

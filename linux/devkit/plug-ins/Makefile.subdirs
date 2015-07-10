@@ -88,6 +88,7 @@ include footPrintManip/Makefile
 include footPrintNode/Makefile
 include footPrintNode_GeometryOverride/Makefile
 include rawfootPrintNode/Makefile
+include squaresNode_noDepthTest/Makefile
 include fragmentDumper/Makefile
 include fullLoftNode/Makefile
 include gammaShader/Makefile

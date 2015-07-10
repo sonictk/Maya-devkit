@@ -27,6 +27,7 @@
 #include <maya/MGLFunctionTable.h>
 #include <maya/MGlobal.h>
 #include <maya/MHWGeometry.h>
+#include <maya/MHWGeometryUtilities.h>
 #include <maya/MHardwareRenderer.h>
 #include <maya/MObject.h>
 #include <maya/MObjectArray.h>
@@ -44,7 +45,7 @@
 #include <d3d11.h>
 #endif
 
-namespace
+namespace apiMeshSubSceneOverrideHelpers
 {
 	// Helper class for link lost callback
 	class ShadedItemUserData : public MUserData
@@ -82,7 +83,7 @@ namespace
 	class simpleComponentConverter : public MHWRender::MPxComponentConverter
 	{
 	public:
-		simpleComponentConverter(MFn::Type componentType, MSelectionMask::SelectionType selectionType)
+		simpleComponentConverter(MFn::Type componentType, MSelectionMask selectionType)
 		: MHWRender::MPxComponentConverter()
 		, fComponentType(componentType)
 		, fSelectionType(selectionType) {}
@@ -167,7 +168,10 @@ namespace
 		static MPxComponentConverter* creatorVertexSelection()
 		{
 			// creator function to instanciate a component converter for vertex selection
-			return new simpleComponentConverter(MFn::kMeshVertComponent, MSelectionMask::kSelectMeshVerts);
+			MSelectionMask mask;
+			mask.setMask(MSelectionMask::kSelectMeshVerts);
+			mask.addMask(MSelectionMask::kSelectPointsForGravity);
+			return new simpleComponentConverter(MFn::kMeshVertComponent, mask);
 		}
 
 		static MPxComponentConverter* creatorEdgeSelection()
@@ -184,13 +188,14 @@ namespace
 
 	private:
 		const MFn::Type fComponentType;
-		const MSelectionMask::SelectionType fSelectionType;
+		const MSelectionMask fSelectionType;
 
 		MFnSingleIndexedComponent fComponent;
 		MObject fComponentObject;
 		std::vector<int> fLookupTable;
 	};
 }
+using namespace apiMeshSubSceneOverrideHelpers;
 
 // Compile time switching for regular MVertexBuffer management vs. custom
 // user buffer management. Just an example to show
@@ -263,6 +268,17 @@ apiMeshSubSceneOverride::~apiMeshSubSceneOverride()
 {
 	fMesh = NULL;
 
+	// Clear out LinkLost callbacks still in flight:
+	// They might get triggered if the shader are destroyed before
+	// the render items, and at this point the fOverride member is clearly invalid.
+	std::vector<ShadedItemUserData*>::iterator it;
+	for (it = fLinkLostCallbackData.begin(); it != fLinkLostCallbackData.end(); ++it)
+	{
+		ShadedItemUserData* cbData = *it;
+		cbData->fOverride = 0;
+	}
+	fLinkLostCallbackData.clear();
+
 	MHWRender::MRenderer* renderer = MHWRender::MRenderer::theRenderer();
 	if (renderer)
 	{
@@ -306,6 +322,19 @@ apiMeshSubSceneOverride::~apiMeshSubSceneOverride()
 	}
 
 	deleteBuffers();
+}
+
+void apiMeshSubSceneOverride::untrackLinkLostData(ShadedItemUserData* data)
+{
+	for (size_t i = 0; i < fLinkLostCallbackData.size(); ++i)
+	{
+		if (fLinkLostCallbackData[i] == data)
+		{
+			fLinkLostCallbackData[i] = fLinkLostCallbackData.back();
+			fLinkLostCallbackData.pop_back();
+			break;
+		}
+	}
 }
 
 MHWRender::DrawAPI apiMeshSubSceneOverride::supportedDrawAPIs() const
@@ -667,12 +696,13 @@ void apiMeshSubSceneOverride::manageRenderItems(
 					{
 						MPlugArray connectedPlugs;
 						shaderPlug.connectedTo(connectedPlugs, true, false);
+						fLinkLostCallbackData.push_back(new ShadedItemUserData(this));
 						if (connectedPlugs.length() >= 1 &&
 							shadedItem->setShaderFromNode(
 								connectedPlugs[0].node(),
 								instances[0],
 								shadedItemLinkLost,
-								new ShadedItemUserData(this)))
+								fLinkLostCallbackData.back()))
 						{
 							assert(shadedItem->isShaderFromNode());
 							hasSetShaderFromNode = true;
@@ -707,7 +737,9 @@ void apiMeshSubSceneOverride::manageRenderItems(
 		// use for selection only : not visible in viewport
 		vertexSelectionItem->setDrawMode(MHWRender::MGeometry::kSelectionOnly);
 		// set the selection mask to kSelectMeshVerts : we want the render item to be used for Vertex Components selection
-		vertexSelectionItem->setSelectionMask( MSelectionMask::kSelectMeshVerts );
+		MSelectionMask mask(MSelectionMask::kSelectMeshVerts);
+		mask.addMask(MSelectionMask::kSelectPointsForGravity);
+		vertexSelectionItem->setSelectionMask( mask );
 		// set selection priority : on top
 		vertexSelectionItem->depthPriority(MRenderItem::sSelectionDepthPriority);
 		vertexSelectionItem->setShader(fVertexComponentShader);
@@ -1101,8 +1133,12 @@ void apiMeshSubSceneOverride::rebuildGeometryBuffers()
 	fNormalBuffer = new MVertexBuffer(normalDesc);
 	fBoxPositionBuffer = new MVertexBuffer(posDesc);
 
-	float* positions = (float*)fPositionBuffer->acquire(totalVerts, true);
-	float* normals = (float*)fNormalBuffer->acquire(totalVerts, true);
+	// Generating a compact position buffer will reduce the data size transferred to the
+	// video card by leveraging the index buffer capabilities. It will also help with
+	// component selection since the vertex ID from the hit record will match one to one with
+	// the position in the vertices array.
+	float* positions = (float*)fPositionBuffer->acquire(meshGeom->vertices.length(), true);
+	float* normals = (float*)fNormalBuffer->acquire(meshGeom->vertices.length(), true);
 
 	float* boxPositions = NULL;
 	unsigned int* boxIndices = NULL;
@@ -1127,7 +1163,7 @@ void apiMeshSubSceneOverride::rebuildGeometryBuffers()
 	fShadedIndexBuffer = new MIndexBuffer(MGeometry::kUnsignedInt32);
 
 	unsigned int* wireBuffer = (unsigned int*)fWireIndexBuffer->acquire(2*totalVerts, true);
-	unsigned int* vertexBuffer = (unsigned int*)fVertexIndexBuffer->acquire(totalVerts, true);	
+	unsigned int* vertexBuffer = (unsigned int*)fVertexIndexBuffer->acquire(meshGeom->vertices.length(), true);	
 	unsigned int* shadedBuffer = (unsigned int*)fShadedIndexBuffer->acquire(3*numTriangles, true);
 
 	// Sanity check
@@ -1141,31 +1177,17 @@ void apiMeshSubSceneOverride::rebuildGeometryBuffers()
 	int vid = 0;
 	int pid = 0;
 	int nid = 0;
-	for (int i=0; i<meshGeom->faceCount; i++)
+	for (unsigned int i=0; i<meshGeom->vertices.length(); i++)
 	{
-		// Ignore degenerate faces
-		int numVerts = meshGeom->face_counts[i];
-		if (numVerts > 2)
-		{
-			for (int j=0; j<numVerts; j++)
-			{
-				MPoint position = meshGeom->vertices[meshGeom->face_connects[vid]];
-				positions[pid++] = (float)position[0];
-				positions[pid++] = (float)position[1];
-				positions[pid++] = (float)position[2];
+		MPoint position = meshGeom->vertices[i];
+		positions[pid++] = (float)position[0];
+		positions[pid++] = (float)position[1];
+		positions[pid++] = (float)position[2];
 
-				MVector normal = meshGeom->normals[meshGeom->face_connects[vid]];
-				normals[nid++] = (float)normal[0];
-				normals[nid++] = (float)normal[1];
-				normals[nid++] = (float)normal[2];
-
-				vid++;
-			}
-		}
-		else if (numVerts > 0)
-		{
-			vid += numVerts;
-		}
+		MVector normal = meshGeom->normals[i];
+		normals[nid++] = (float)normal[0];
+		normals[nid++] = (float)normal[1];
+		normals[nid++] = (float)normal[2];
 	}
 	fPositionBuffer->commit(positions); positions = NULL;
 	fNormalBuffer->commit(normals); normals = NULL;
@@ -1290,11 +1312,11 @@ void apiMeshSubSceneOverride::rebuildGeometryBuffers()
 			first = vid;
 			for (int v=0; v<numVerts-1; v++)
 			{
-				wireBuffer[idx++] = vid++;
-				wireBuffer[idx++] = vid;
+				wireBuffer[idx++] = meshGeom->face_connects[vid++];
+				wireBuffer[idx++] = meshGeom->face_connects[vid];
 			}
-			wireBuffer[idx++] = vid++;
-			wireBuffer[idx++] = first;
+			wireBuffer[idx++] = meshGeom->face_connects[vid++];
+			wireBuffer[idx++] = meshGeom->face_connects[first];
 		}
 		else
 		{
@@ -1304,7 +1326,7 @@ void apiMeshSubSceneOverride::rebuildGeometryBuffers()
 	fWireIndexBuffer->commit(wireBuffer); wireBuffer = NULL;
 
 	// Fill index data for vertices
-	for (unsigned int i=0; i<totalVerts; ++i)
+	for (unsigned int i=0; i<meshGeom->vertices.length(); ++i)
 		vertexBuffer[i] = i;
 	fVertexIndexBuffer->commit(vertexBuffer); vertexBuffer = NULL;
 
@@ -1319,9 +1341,9 @@ void apiMeshSubSceneOverride::rebuildGeometryBuffers()
 		{
 			for (int v=1; v<numVerts-1; v++)
 			{
-				shadedBuffer[idx++] = base;
-				shadedBuffer[idx++] = base+v;
-				shadedBuffer[idx++] = base+v+1;
+				shadedBuffer[idx++] = meshGeom->face_connects[base];
+				shadedBuffer[idx++] = meshGeom->face_connects[base+v];
+				shadedBuffer[idx++] = meshGeom->face_connects[base+v+1];
 			}
 			base += numVerts;
 		}
@@ -1379,8 +1401,8 @@ void apiMeshSubSceneOverride::rebuildActiveComponentIndexBuffers()
 					{
 						if (fActiveEdgesSet.count(eid) > 0)
 						{
-							activeEdgesBuffer[idx++] = vid;
-							activeEdgesBuffer[idx++] = vid + 1;
+							activeEdgesBuffer[idx++] = meshGeom->face_connects[vid];
+							activeEdgesBuffer[idx++] = meshGeom->face_connects[vid + 1];
 						}
 						++vid;
 						++eid;
@@ -1388,8 +1410,8 @@ void apiMeshSubSceneOverride::rebuildActiveComponentIndexBuffers()
 
 					if (fActiveEdgesSet.count(eid) > 0)
 					{
-						activeEdgesBuffer[idx++] = vid;
-						activeEdgesBuffer[idx++] = first;
+						activeEdgesBuffer[idx++] = meshGeom->face_connects[vid];
+						activeEdgesBuffer[idx++] = meshGeom->face_connects[first];
 					}
 					++vid;
 					++eid;
@@ -1435,9 +1457,9 @@ void apiMeshSubSceneOverride::rebuildActiveComponentIndexBuffers()
 					{
 						for (int v=1; v<numVerts-1; ++v)
 						{
-							activeFacesBuffer[idx++] = vid;
-							activeFacesBuffer[idx++] = vid+v;
-							activeFacesBuffer[idx++] = vid+v+1;
+							activeFacesBuffer[idx++] = meshGeom->face_connects[vid];
+							activeFacesBuffer[idx++] = meshGeom->face_connects[vid+v];
+							activeFacesBuffer[idx++] = meshGeom->face_connects[vid+v+1];
 						}
 					}
 					vid += numVerts;
@@ -1532,11 +1554,24 @@ void apiMeshSubSceneOverride::updateSelectionGranularity(
 	const MDagPath& path,
 	MHWRender::MSelectionContext& selectionContext)
 {
-	MHWRender::MSelectionContext::SelectionLevel level = MHWRender::MSelectionContext::kObject;
-	if( MGlobal::selectionMode() == MGlobal::kSelectComponentMode ) {
-		level = MHWRender::MSelectionContext::kComponent;
+	MHWRender::DisplayStatus displayStatus = MHWRender::MGeometryUtilities::displayStatus(path);
+	if(displayStatus == MHWRender::kHilite)
+	{
+		MSelectionMask globalComponentMask = MGlobal::selectionMode() == MGlobal::kSelectComponentMode ? MGlobal::componentSelectionMask() : MGlobal::objectSelectionMask();
+		MSelectionMask supportedComponents(MSelectionMask::kSelectMeshVerts);
+		supportedComponents.addMask(MSelectionMask::kSelectMeshEdges);
+		supportedComponents.addMask(MSelectionMask::kSelectMeshFaces);
+		supportedComponents.addMask(MSelectionMask::kSelectPointsForGravity);
+
+		if(globalComponentMask.intersects(supportedComponents))
+		{
+			selectionContext.setSelectionLevel(MHWRender::MSelectionContext::kComponent);
+		}
 	}
-	selectionContext.setSelectionLevel(level);
+	else if (pointSnappingActive())
+	{
+		selectionContext.setSelectionLevel(MHWRender::MSelectionContext::kComponent);
+	}
 }
 
 bool apiMeshSubSceneOverride::hasUIDrawables() const
@@ -1602,9 +1637,11 @@ MStatus apiMeshSubSceneOverride::deregisterComponentConverters()
 void apiMeshSubSceneOverride::shadedItemLinkLost(MUserData* userData)
 {
 	ShadedItemUserData* data = dynamic_cast<ShadedItemUserData*>(userData);
-	if (data && data->fOverride && data->fOverride->fMesh)
+	if (data && data->fOverride)
 	{
-		data->fOverride->fMesh->setMaterialDirty(true);
+		if (data->fOverride->fMesh)
+			data->fOverride->fMesh->setMaterialDirty(true);
+		data->fOverride->untrackLinkLostData(data);
 	}
 	delete userData;
 }
@@ -1613,6 +1650,11 @@ void apiMeshSubSceneOverride::shadedItemLinkLost(MUserData* userData)
 bool useSelectHighlight(const MSelectionList& selectedList, const MDagPath& path)
 {
     MStatus status = MStatus::kSuccess;
+
+	MHWRender::DisplayStatus displayStatus = MHWRender::MGeometryUtilities::displayStatus(path);
+	if ((displayStatus & (MHWRender::kHilite | MHWRender::kActiveComponent)) != 0)
+		return true;
+
 	MDagPath pathCopy = path;
 	do
 	{

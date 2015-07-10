@@ -35,6 +35,7 @@ namespace MHWRender
 class MDrawContext;
 class MRenderItemList;
 class MSamplerState;
+class MVertexBufferDescriptorList;
 
 // ****************************************************************************
 // DECLARATIONS
@@ -180,6 +181,8 @@ public:
 
 	MShaderInstance* createShaderInstanceWithColorManagementFragment(const MString& inputColorSpace);
 
+	MStatus requiredVertexBuffers(MVertexBufferDescriptorList& list) const;
+
 	static const char* className();
 
 	int annotationAsInt(const MString& parameterName, const MString& annotationName, MStatus& status);
@@ -205,6 +208,9 @@ public:
 private:
 	MShaderInstance(void* data, DrawCallback preCb, DrawCallback postCb);
 	~MShaderInstance();
+
+	static void requiredVertexBuffers( MVertexBufferDescriptorList &list, 
+										void* format);
 
 	void* fData;
 	DrawCallback fPreDrawCallback;

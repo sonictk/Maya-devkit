@@ -40,9 +40,16 @@
 
 GLSLShaderOverride::GLSLShaderOverride(const MObject& obj)
 : MHWRender::MPxShaderOverride(obj)
+, fBBoxExtraScale(1.0)
 , fShaderBound(false)
 , fShaderNode(NULL)
 {
+	// Get an early peek to the shader node, so we can have the scale value,
+	// before the shader can be discarded by the clipping.
+	GLSLShaderNode* shaderNode = (GLSLShaderNode*)MPxHardwareShader::getHardwareShaderPtr(const_cast<MObject&>(obj));
+	if(shaderNode) {
+		fBBoxExtraScale = shaderNode->techniqueBBoxExtraScale();
+	}
 }
 
 MHWRender::MPxShaderOverride* GLSLShaderOverride::Creator(const MObject& obj)
@@ -64,16 +71,18 @@ MString GLSLShaderOverride::initialize(const MInitContext& initContext, MInitFee
 
 	if(fShaderNode)
 	{
-		MHWRender::MShaderInstance * shaderInstance = fShaderNode->GetGLSLShaderInstance();
+		MHWRender::MShaderInstance* shaderInstance = fShaderNode->GetGLSLShaderInstance();
 		
 		if (shaderInstance)
 		{
-			setGeometryRequirements(*shaderInstance);
-
-			if (shaderInstance)
-			{
-				addShaderSignature(*shaderInstance);
+			if( fShaderNode->hasUpdatedVaryingInput() ) {
+				fShaderNode->updateGeometryRequirements();
 			}
+
+			addGeometryRequirements(fShaderNode->geometryRequirements());
+			//setGeometryRequirements(*shaderInstance);
+
+			addShaderSignature(*shaderInstance);
 		}
 
 		//Setup indexing requirement
@@ -83,7 +92,6 @@ MString GLSLShaderOverride::initialize(const MInitContext& initContext, MInitFee
 				(MHWRender::MIndexBufferDescriptor::kCustom, customPrimitiveGeneratorName, MHWRender::MGeometry::kTriangles);
 			addIndexingRequirement(indexingRequirement);
 		}
-	
 	}
 
 	// Build key string, note that if any attribute on the node changes that
@@ -94,7 +102,12 @@ MString GLSLShaderOverride::initialize(const MInitContext& initContext, MInitFee
 	result += MString(", effectFileName=");
 	result += fShaderNode ? fShaderNode->effectName() : MString("null");
 	result += MString(", technique=");
-	result += (fShaderNode) ? fShaderNode->techniqueName() : MString("null");
+	result += fShaderNode ? fShaderNode->techniqueName() : MString("null");
+	if(fShaderNode && fShaderNode->techniqueIsSelectable()) {
+		// adding "selectable=true" is required to have shader instance selectable
+		result += MString(", selectable=true");
+	}
+
 	return result;
 }
 
@@ -115,8 +128,7 @@ void GLSLShaderOverride::activateKey(MHWRender::MDrawContext& context, const MSt
 {
 	if(fShaderNode)
 	{
-		MHWRender::MShaderInstance * shaderInstance = fShaderNode->GetGLSLShaderInstance();
-
+		MHWRender::MShaderInstance* shaderInstance = fShaderNode->GetGLSLShaderInstance();
 		if (shaderInstance)
 		{
 			// Must update before binding otherwise render will lag one draw behind
@@ -130,27 +142,9 @@ void GLSLShaderOverride::activateKey(MHWRender::MDrawContext& context, const MSt
 
 bool GLSLShaderOverride::handlesDraw(MHWRender::MDrawContext& context)
 {
-	if (!fShaderNode)
-		return false;
-
-	MHWRender::MShaderInstance * shaderInstance = fShaderNode->GetGLSLShaderInstance();
-	if (!shaderInstance)
-		return false;
-
-	bool isHandled = false;
-
-	shaderInstance->bind(context);
-
-	const unsigned int passCount = shaderInstance->getPassCount(context);
-	for (unsigned int i = 0; i < passCount && !isHandled; ++i)
-	{
-		isHandled = fShaderNode->passHandlesContext(context, i);
-	}
-
-	shaderInstance->unbind(context);
-
-	return isHandled;
+	return (fShaderNode && fShaderNode->techniqueHandlesContext(context));
 }
+
 
 bool GLSLShaderOverride::draw(MHWRender::MDrawContext& context, const MHWRender::MRenderItemList& renderItemList) const
 {
@@ -160,20 +154,31 @@ bool GLSLShaderOverride::draw(MHWRender::MDrawContext& context, const MHWRender:
 	if (!fShaderBound)
 		return false;
 
-	MHWRender::MShaderInstance * shaderInstance = fShaderNode->GetGLSLShaderInstance();
+	MHWRender::MShaderInstance* shaderInstance = fShaderNode->GetGLSLShaderInstance();
 	if (!shaderInstance)
 		return false;
 
 	bool drewSomething = false;
 
-	const unsigned int passCount = shaderInstance->getPassCount(context);
-	for (unsigned int i = 0; i < passCount; ++i)
+	const int itemCount = renderItemList.length();
+	for (int itemId = 0; itemId < itemCount; ++itemId)
 	{
-		if( fShaderNode->passHandlesContext(context, i) )
+		const MHWRender::MRenderItem* item = renderItemList.itemAt(itemId);
+		if (item == NULL)
+			continue;
+
+		GLSLShaderNode::RenderItemDesc renderItemDesc = { false, false, false };
+		fShaderNode->updateOverrideNonMaterialItemParameters(context, item, renderItemDesc);
+
+		const unsigned int passCount = shaderInstance->getPassCount(context);
+		for (unsigned int passIndex = 0; passIndex < passCount; ++passIndex)
 		{
-			shaderInstance->activatePass(context, i);
-			MHWRender::MPxShaderOverride::drawGeometry(context);
-			drewSomething = true;
+			if( fShaderNode->passHandlesContext(context, passIndex, &renderItemDesc) )
+			{
+				shaderInstance->activatePass(context, passIndex);
+				MHWRender::MPxShaderOverride::drawGeometry(context);
+				drewSomething = true;
+			}
 		}
 	}
 
@@ -184,8 +189,7 @@ void GLSLShaderOverride::terminateKey(MHWRender::MDrawContext& context, const MS
 {
 	if (fShaderBound && fShaderNode)
 	{
-
-		MHWRender::MShaderInstance * shaderInstance = fShaderNode->GetGLSLShaderInstance();
+		MHWRender::MShaderInstance* shaderInstance = fShaderNode->GetGLSLShaderInstance();
 		if (shaderInstance)
 		{
 			shaderInstance->unbind(context);
@@ -215,6 +219,15 @@ bool GLSLShaderOverride::overridesDrawState()
 	return fShaderNode && fShaderNode->techniqueOverridesDrawState();
 }
 
+double GLSLShaderOverride::boundingBoxExtraScale() const
+{
+	return fShaderNode ? fShaderNode->techniqueBBoxExtraScale() : fBBoxExtraScale;
+}
+
+bool GLSLShaderOverride::overridesNonMaterialItems() const
+{
+	return fShaderNode ? fShaderNode->techniqueOverridesNonMaterialItems() : false;
+}
 
 MHWRender::MShaderInstance* GLSLShaderOverride::shaderInstance() const
 {
@@ -223,7 +236,12 @@ MHWRender::MShaderInstance* GLSLShaderOverride::shaderInstance() const
 
 bool GLSLShaderOverride::rebuildAlways()
 {
-	return !fShaderNode || fShaderNode->rebuildAlways();
+	if( fShaderNode ) {
+		if( fShaderNode->hasUpdatedVaryingInput() ) {
+			fShaderNode->updateGeometryRequirements();
+			return true;
+		}
+	}
+	return false;
 }
-
 

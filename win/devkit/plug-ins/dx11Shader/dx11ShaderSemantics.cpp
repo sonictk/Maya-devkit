@@ -101,9 +101,21 @@ namespace dx11ShaderSemantic
 	const char* kHwFogEnabled				= "HardwareFogEnabled";
 	const char* kHwFogMode					= "HardwareFogMode";
 	const char* kHwFogStart					= "HardwareFogStart";
-	const char* kHwFogEnd						= "HardwareFogEnd";
+	const char* kHwFogEnd					= "HardwareFogEnd";
 	const char* kHwFogDensity				= "HardwareFogDensity";
 	const char* kHwFogColor					= "HardwareFogColor";
+
+	// Hw selection
+	const char* kHwSelectionPrimitiveBase				= "HWS_PrimitiveBase";
+	const char* kHwSelectionPrimitiveCountPerInstance	= "HWS_PrimitiveCountPerInstance";
+	const char* kHwSelectionObjectLevel					= "HWS_ObjectLevel";
+	const char* kHwSelectionFaceLevel					= "HWS_FaceLevel";
+	const char* kHwSelectionEdgeLevel					= "HWS_EdgeLevel";
+	const char* kHwSelectionVertexLevel					= "HWS_VertexLevel";
+	const char* kHwSelectionOccluder					= "HWS_Occluder";
+	const char* kHwSelectionFrontCCW					= "HWS_FrontCCW";
+	const char* kHwSelectionInstancedDraw				= "HWS_InstancedDraw";
+	const char* kHwSelectionHighlighting				= "HWS_Highlighting";
 
 	//--------------------------
 	// Maya custom semantics
@@ -200,6 +212,8 @@ namespace dx11ShaderAnnotation
 	const char* kTransparencyTest						= "transparencyTest";
 	// Describe whether the technique supports advanced transparency.
 	const char* kSupportsAdvancedTransparency			= "supportsAdvancedTransparency";
+	// Describe whether the technique overrides non material items.
+	const char* kOverridesNonMaterialItems				= "overridesNonMaterialItems";
 
 	// Texture annotations
 
@@ -208,6 +222,11 @@ namespace dx11ShaderAnnotation
 
 	// Allow the shader writer to force the variable name to become the attribute name, even if UIName annotation is used
 	const char* kVariableNameAsAttributeName			= "VariableNameAsAttributeName";
+
+	// Pass annotations
+	const char* kDrawContext							= "drawContext";
+	const char* kNonMaterialItemsPass					= "nonMaterialItemsPass";
+	const char* kPrimitiveFilter						= "primitiveFilter";
 }
 
 namespace dx11ShaderSemanticValue
@@ -221,6 +240,7 @@ namespace dx11ShaderSemanticValue
 namespace dx11ShaderAnnotationValue
 {
 	const char* kNone									= "None";
+	const char* kTrue									= "True";
 
 	// Supported values for kTextureType and kResourceType annotations.
 	const char* k1D										= "1D";
@@ -261,6 +281,10 @@ namespace dx11ShaderAnnotationValue
 	const char* kPoint									= "Point";
 	const char* kSpot									= "Spot";
 	const char* kDirectional							= "Directional";
+
+	// Supported value for kPrimitiveFilter annotation
+	const char* kFatLine								= "fatLine";
+	const char* kFatPoint								= "fatPoint";
 }
 
 

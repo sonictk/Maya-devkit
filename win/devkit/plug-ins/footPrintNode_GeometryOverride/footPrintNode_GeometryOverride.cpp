@@ -433,7 +433,7 @@ void FootPrintGeometryOverride::updateRenderItems( const MDagPath& path, MHWRend
         shadedHeelItem = MHWRender::MRenderItem::Create(
             shadedHeelItemName_,
             MHWRender::MRenderItem::DecorationItem,
-            MHWRender::MGeometry::kTriangles);
+            MHWRender::MGeometry::kTriangleStrip);
         shadedHeelItem->setDrawMode(MHWRender::MGeometry::kShaded);
         shadedHeelItem->depthPriority(5);
 
@@ -465,7 +465,7 @@ void FootPrintGeometryOverride::updateRenderItems( const MDagPath& path, MHWRend
         shadedSoleItem = MHWRender::MRenderItem::Create(
             shadedSoleItemName_,
             MHWRender::MRenderItem::DecorationItem,
-            MHWRender::MGeometry::kTriangles);
+            MHWRender::MGeometry::kTriangleStrip);
         shadedSoleItem->setDrawMode(MHWRender::MGeometry::kShaded);
         shadedSoleItem->depthPriority(5);
 
@@ -571,6 +571,7 @@ void FootPrintGeometryOverride::populateGeometry(
 
 		// Start position in the index buffer (start of heel or sole positions):
 		int startIndex = 0;
+		int endIndex = 0;
 		// Number of index to generate (for line strip, or triangle list)
 		int numIndex = 0;
 		bool isWireFrame = true;
@@ -586,13 +587,16 @@ void FootPrintGeometryOverride::populateGeometry(
 		}
 		else if (item->name() == shadedHeelItemName_ )
 		{
-			numIndex = (heelCount - 2) * 3;
+			numIndex = heelCount - 2;
+			startIndex = 1;
+			endIndex = heelCount - 2;
 			isWireFrame = false;
 		}
 		else if (item->name() == shadedSoleItemName_ )
 		{
 			startIndex = heelCount;
-			numIndex = (soleCount - 2) * 3;
+			endIndex = heelCount + soleCount - 2;
+			numIndex = soleCount - 2;
 			isWireFrame = false;
 		}
 
@@ -611,15 +615,11 @@ void FootPrintGeometryOverride::populateGeometry(
 				}
 				else
 				{
-					// Triangle list corresponding to a triangle fan covering the surface:
-					//		0 1 2
-					//		0 2 3
-					//		0 3 4
-					//		...
-					indices[i] = startIndex;
-					indices[i+1] = startIndex + i/3 + 1;
-					indices[i+2] = startIndex + i/3 + 2;
-					i += 3;
+					// Triangle strip zig-zagging thru the points:
+					indices[i] = startIndex + i/2;
+					if (i+1 < numIndex)
+						indices[i+1] = endIndex - i/2;
+					i += 2;
 				}
 			}
 

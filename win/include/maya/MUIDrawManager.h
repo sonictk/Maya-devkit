@@ -225,6 +225,9 @@ namespace MHWRender
 		void beginDrawable(unsigned int name, bool nameIsPickable);
 		void endDrawable();
 
+		void beginDrawInXray();
+		void endDrawInXray();
+
 		void setColor( const MColor& color );
 		void setColorIndex( const short index );
 

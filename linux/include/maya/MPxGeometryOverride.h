@@ -153,6 +153,8 @@ public:
 		const MDagPath& path,
 		MSelectionContext& selectionContext);
 
+	static bool pointSnappingActive();
+
 	static	const char*	className();
 
 private:

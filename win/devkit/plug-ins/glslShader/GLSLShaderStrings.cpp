@@ -36,7 +36,7 @@ namespace glslShaderStrings
 	const MStringResourceId kPrefFileOpen				( kPluginId, "kPrefFileOpen", 				MString( "Open" ) );
 	const MStringResourceId kPrefDefaultEffectFile		( kPluginId, "kPrefDefaultEffectFile", 		MString( "Default effects file" ) );
 	const MStringResourceId kPrefGLSLShaderPanel		( kPluginId, "kPrefGLSLShaderPanel", 		MString( "GLSL Shader Preferences" ) );
-	const MStringResourceId kPrefGLSLShaderTab			( kPluginId, "kPrefGLSLShaderTab", 			MString( "GLSL Shader" ) );
+	const MStringResourceId kPrefGLSLShaderTab			( kPluginId, "kPrefGLSLShaderTab", 			MString( "    GLSL Shader" ) );
 
 	// GLSLShaderTemplate.mel
 	const MStringResourceId kShaderFile					( kPluginId, "kShaderFile", 				MString( "Shader File" ) );

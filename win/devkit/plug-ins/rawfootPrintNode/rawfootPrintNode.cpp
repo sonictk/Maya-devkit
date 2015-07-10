@@ -24,6 +24,7 @@
 #include <maya/MDistance.h>
 #include <maya/MMatrix.h>
 #include <maya/MFnUnitAttribute.h>
+#include <maya/MFileObject.h>
 
 // Viewport 2.0 includes
 #include <maya/MDrawRegistry.h>
@@ -371,6 +372,8 @@ private:
 	ID3D11PixelShader* mPixelShaderPtr;
 	ID3D11InputLayout* mVertexLayoutPtr;
 
+	MString mEffectLocation;
+	bool mEffectLoad;
 	unsigned int mStride;
 	unsigned int mOffset;
 	struct ConstantBufferDef
@@ -383,7 +386,9 @@ private:
 	void setupConstantBuffer( const XMMATRIX& scale );
 private:
 	RawFootPrintDrawAgentDX():
-		mDevicePtr(NULL), mDeviceContextPtr(NULL), mStride(sizeof(float)*3), mOffset(0),
+		mDevicePtr(NULL), mDeviceContextPtr(NULL), mEffectLocation(""),
+		mEffectLoad(false),
+		mStride(sizeof(float)*3), mOffset(0),
 		mBoundingboxVertexBufferPtr(NULL),
 		mBoundingboxIndexBufferPtr(NULL),
 		mSoleVertexBufferPtr(NULL),
@@ -538,6 +543,24 @@ void RawFootPrintDrawAgentGL::drawWireframe( float multiplier )
 //
 void RawFootPrintDrawAgentDX::beginDraw()
 {
+	// Please move file "rawfootprint.hlsl" to following location, or 
+	// change following location as your local path.
+	mEffectLocation = 
+		MString(getenv("MAYA_LOCATION")) +
+		MString("\\devkit\\plug-ins") +
+		MString("\\rawfootprint.hlsl");
+
+	MFileObject fileObj;
+	fileObj.setRawFullName(mEffectLocation);
+	assert(fileObj.exists());
+	if (!fileObj.exists())
+	{
+		MGlobal::displayWarning("Can not find file:" +  mEffectLocation);
+		mEffectLoad = false;
+		return;
+	}
+	mEffectLoad = true;
+
 	// Initial device
 	if( !mDevicePtr || !mDeviceContextPtr ){
 		// get renderer
@@ -600,7 +623,7 @@ void RawFootPrintDrawAgentDX::setupConstantBuffer( const XMMATRIX& scale )
 void RawFootPrintDrawAgentDX::drawShaded( float multiplier )
 {
 	assert( mDeviceContextPtr );
-	if ( !mDeviceContextPtr )
+	if ( !(mDeviceContextPtr && mEffectLoad) )
 		return;
 
 	// Set constant buffer
@@ -626,7 +649,7 @@ void RawFootPrintDrawAgentDX::drawShaded( float multiplier )
 void RawFootPrintDrawAgentDX::drawBoundingBox( const MPoint& min, const MPoint& max )
 {
 	assert( mDeviceContextPtr );
-	if ( !mDeviceContextPtr )
+	if ( !(mDeviceContextPtr && mEffectLoad) )
 		return;
 
 	// Set constant buffer
@@ -646,7 +669,7 @@ void RawFootPrintDrawAgentDX::drawBoundingBox( const MPoint& min, const MPoint& 
 void RawFootPrintDrawAgentDX::drawWireframe( float multiplier )
 {
 	assert( mDeviceContextPtr );
-	if ( !mDeviceContextPtr )
+	if ( !(mDeviceContextPtr && mEffectLoad) )
 		return;
 
 	// Set constant buffer
@@ -1127,17 +1150,14 @@ bool RawFootPrintDrawAgentDX::initShadersDX()
 	ID3DBlob* vsBlob = NULL;
 	ID3DBlob* psBlob = NULL;
 	ID3DBlob* pErrorBlob;
-	MString effectLocation(
-		MString(getenv("MAYA_LOCATION")) +
-		MString("\\devkit\\plug-ins") +
-		MString("\\rawfootprint.hlsl"));
+
 
 	// VS
 	if (!mVertexShaderPtr)
 	{
 #if _MSC_VER < 1700
 		hr = D3DX11CompileFromFile(
-			effectLocation.asChar(),
+			mEffectLocation.asChar(),
 			NULL,
 			NULL,
 			"mainVS",
@@ -1150,7 +1170,7 @@ bool RawFootPrintDrawAgentDX::initShadersDX()
 			NULL);
 #else
 		hr = D3DCompileFromFile(
-			effectLocation.asWChar(),
+			mEffectLocation.asWChar(),
 			NULL,
 			NULL,
 			"mainVS",
@@ -1200,7 +1220,7 @@ bool RawFootPrintDrawAgentDX::initShadersDX()
 	{
 #if _MSC_VER < 1700
 		hr = D3DX11CompileFromFile(
-			effectLocation.asChar(),
+			mEffectLocation.asChar(),
 			NULL,
 			NULL,
 			"mainPS",
@@ -1213,7 +1233,7 @@ bool RawFootPrintDrawAgentDX::initShadersDX()
 			NULL);
 #else
 		hr = D3DCompileFromFile(
-			effectLocation.asWChar(),
+			mEffectLocation.asWChar(),
 			NULL,
 			NULL,
 			"mainPS",

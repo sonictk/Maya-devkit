@@ -454,8 +454,9 @@ void apiMesh::componentToPlugs( MObject & component,
 //
 {
 	if ( component.hasFn(MFn::kSingleIndexedComponent) ) {
-
-		MFnSingleIndexedComponent fnVtxComp( component );
+		apiMesh* nonConstPtr = (apiMesh*)this;
+		MObject vtxComp = nonConstPtr->convertToVertexComponent(component);
+		MFnSingleIndexedComponent fnVtxComp( vtxComp );
     	MObject thisNode = thisMObject();
 		MPlug plug( thisNode, mControlPoints );
 		// If this node is connected to a tweak node, reset the
@@ -614,8 +615,10 @@ MSelectionMask apiMesh::getComponentSelectionMask() const
 //    The selection mask of the shape components
 //
 {
-	MSelectionMask::SelectionType selType = MSelectionMask::kSelectMeshComponents;
-    return MSelectionMask( selType );
+	MSelectionMask retVal(MSelectionMask::kSelectMeshVerts);
+	retVal.addMask(MSelectionMask::kSelectMeshEdges);
+	retVal.addMask(MSelectionMask::kSelectMeshFaces);
+	return retVal;
 }
 
 /* override */
@@ -824,7 +827,7 @@ void apiMesh::transformUsing( const MMatrix & mat,
 			//
 			for ( i = 0; i < len && j < cacheLen; i++ )
 			{
-				MObject comp = componentList[i];
+				MObject comp = convertToVertexComponent(componentList[i]);
 				MFnSingleIndexedComponent fnComp( comp );
 				int elemCount = fnComp.elementCount();
 				for ( int idx=0; idx<elemCount && j < cacheLen; idx++, ++j ) {
@@ -850,7 +853,7 @@ void apiMesh::transformUsing( const MMatrix & mat,
 			//
 			for ( i=0; i<len; i++ )
 			{
-				MObject comp = componentList[i];
+				MObject comp = convertToVertexComponent(componentList[i]);
 				MFnSingleIndexedComponent fnComp( comp );
 				int elemCount = fnComp.elementCount();
 
@@ -942,7 +945,7 @@ void apiMesh::updateCachedSurface( const apiMeshGeom* geomPtr, const MObjectArra
 		//
 		for ( unsigned int i=0; i<len; i++ )
 		{
-			MObject comp = componentList[i];
+			MObject comp = convertToVertexComponent(componentList[i]);
 			MFnSingleIndexedComponent fnComp( comp );
 			int elemCount = fnComp.elementCount();
 			for ( int idx=0; idx<elemCount; idx++ )
@@ -1039,7 +1042,7 @@ apiMesh::tweakUsing( const MMatrix & mat,
 			//
 			for ( i=0; i<len; i++ )
 			{
-				MObject comp = componentList[i];
+				MObject comp = convertToVertexComponent(componentList[i]);
 				MFnSingleIndexedComponent fnComp( comp );
 				int elemCount = fnComp.elementCount();
 				for ( int idx=0; idx<elemCount && cacheIndex < cacheLen; idx++, cacheIndex++) {
@@ -1072,7 +1075,7 @@ apiMesh::tweakUsing( const MMatrix & mat,
 		if (len > 0) {
 			for ( i=0; i<len; i++ )
 			{
-				MObject comp = componentList[i];
+				MObject comp = convertToVertexComponent(componentList[i]);
 				MFnSingleIndexedComponent fnComp( comp );
 				int elemCount = fnComp.elementCount();
 				if (savePoints) {
@@ -1210,7 +1213,7 @@ void apiMesh::weightedTransformUsing(	const MTransformationMatrix& xform,
 	unsigned int len = componentList.length();
 	for ( unsigned int i=0; i<len; i++ )
 	{
-		MObject comp = componentList[i];
+		MObject comp = convertToVertexComponent(componentList[i]);
 		MFnSingleIndexedComponent fnComp( comp );
 		int elemCount = fnComp.elementCount();
 		bool hasWeights = fnComp.hasWeights();
@@ -1346,7 +1349,7 @@ void apiMesh::weightedTweakUsing(
 		//
 		for ( i=0; i<len; i++ )
 		{
-			MObject comp = componentList[i];
+			MObject comp = convertToVertexComponent(componentList[i]);
 			MFnSingleIndexedComponent fnComp( comp );
 			int elemCount = fnComp.elementCount();
 			for ( int idx=0; idx<elemCount && cacheIndex < cacheLen; idx++, cacheIndex++) {
@@ -1373,7 +1376,7 @@ void apiMesh::weightedTweakUsing(
 
 		for ( i=0; i<len; i++ )
 		{
-			MObject comp = componentList[i];
+			MObject comp = convertToVertexComponent(componentList[i]);
 			MFnSingleIndexedComponent fnComp( comp );
 			int elemCount = fnComp.elementCount();
 			bool hasWeights = fnComp.hasWeights(); // (for weighted transformation)
@@ -1479,7 +1482,8 @@ bool apiMesh::vertexOffsetDirection( MObject & component,
 	MStatus stat;
 	bool offsetOkay = false ;
 
-	MFnSingleIndexedComponent fnComp( component, &stat );
+	MObject vtxComp = convertToVertexComponent(component);
+	MFnSingleIndexedComponent fnComp( vtxComp, &stat );
 	if ( !stat || (component.apiType() != MFn::kMeshVertComponent) ) {
 		return false;
 	}
@@ -1563,6 +1567,15 @@ MBoundingBox apiMesh::boundingBox() const
 //    It is a good idea not to recompute here as this funcion is called often.
 //
 {
+	if ( fShapeDirty )
+	{
+		// Cast away the constant
+		apiMesh *msPtr = (apiMesh *)this;
+
+		// Force update
+		msPtr->meshDataRef();
+	}
+
     MObject thisNode = thisMObject();
     MPlug   c1Plug( thisNode, bboxCorner1 );
     MPlug   c2Plug( thisNode, bboxCorner2 );
@@ -1583,6 +1596,67 @@ MBoundingBox apiMesh::boundingBox() const
     MPoint corner2Point( corner2[0], corner2[1], corner2[2] );
 
     return MBoundingBox( corner1Point, corner2Point );
+}
+
+MObject apiMesh::convertToVertexComponent(const MObject& components)
+{
+	MObject retVal = components;
+
+	if (components.apiType() != MFn::kMeshVertComponent)
+	{
+		// Convert:
+		MFnSingleIndexedComponent srcComponent(components);
+		MFn::Type srcComponentType = srcComponent.componentType();
+
+		std::set<int> srcIndices;
+		for (int i=0; i<srcComponent.elementCount(); ++i)
+			srcIndices.insert( srcComponent.element(i) );
+
+		retVal = srcComponent.create(MFn::kMeshVertComponent);
+		MFnSingleIndexedComponent vtxComponent(retVal);
+		const apiMeshGeom* geomPtr = meshGeom();
+
+		unsigned int base = 0;
+		int edgeId = 0;
+		for (int faceIdx=0; faceIdx<geomPtr->faceCount; faceIdx++)
+		{
+			// ignore degenerate faces
+			int numVerts = geomPtr->face_counts[faceIdx];
+			if (numVerts > 2)
+			{
+				for (int v=0; v<numVerts; v++)
+				{
+					if (srcComponentType == MFn::kMeshEdgeComponent)
+					{
+						if (srcIndices.count(edgeId))
+						{
+							unsigned int vindex1 = base + (v % numVerts);
+							unsigned int vindex2 = base + ((v+1) % numVerts);
+
+							int vertexId1 = geomPtr->face_connects[vindex1];
+							int vertexId2 = geomPtr->face_connects[vindex2];
+
+							vtxComponent.addElement(vertexId1);
+							vtxComponent.addElement(vertexId2);
+						}
+						++edgeId;
+					}
+					else
+					{
+						// Face component:
+						if (srcIndices.count(faceIdx))
+						{
+							unsigned int vindex = base + (v % numVerts);
+							int vertexId = geomPtr->face_connects[vindex];
+							vtxComponent.addElement(vertexId);
+						}
+					}
+				}
+				base += numVerts;
+			}
+		}
+	}
+	return retVal;
 }
 
 /* override */
@@ -1607,10 +1681,18 @@ MPxGeometryIterator* apiMesh::geometryIteratorSetup(MObjectArray& componentList,
 {
 	apiMeshGeomIterator * result = NULL;
 	if ( components.isNull() ) {
-		result = new apiMeshGeomIterator( meshGeom(), componentList );
+
+		MObjectArray vtxComponents;
+		for ( int i=0; i<(int)componentList.length(); i++ ) 
+		{
+			vtxComponents.append(convertToVertexComponent(componentList[i]));
+		}
+
+		result = new apiMeshGeomIterator( meshGeom(), vtxComponents );
 	}
 	else {
-		result = new apiMeshGeomIterator( meshGeom(), components );
+		MObject vtxComponent = convertToVertexComponent(components);
+		result = new apiMeshGeomIterator( meshGeom(), vtxComponent );
 	}
 	return result;
 }

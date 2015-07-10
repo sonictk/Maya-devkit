@@ -87,17 +87,33 @@ namespace MHWRender {
 //
 class dx11ShaderNode : public MPxHardwareShader
 {
-public:
+private:
 	// Identify the purpose of the current rendering process
 	enum ERenderType
 	{
-		RENDER_SCENE,				// Render the scene to the viewport 2.0
+		RENDER_SCENE,				// Render the textured material to the viewport 2.0
+		RENDER_SCENE_NON_MATERIAL,	// Render non material items to the viewport 2.0
 		RENDER_SWATCH,				// Render the swatch that represents the current selected technique
 		RENDER_SWATCH_PROXY,		// Render a dummy swatch when no effect or no valid technique selected
-		RENDER_UVTEXTURE,			// Render a texture for the UV editor
-		RENDER_SCENE_DEFAULT_LIGHT	// Render the scene using a default light
+		RENDER_UVTEXTURE			// Render a texture for the UV editor
 	};
+	
+	inline bool isRenderScene(ERenderType renderType) const { return (renderType == RENDER_SCENE || renderType == RENDER_SCENE_NON_MATERIAL); }
+	inline bool isRenderSwatch(ERenderType renderType) const { return (renderType == RENDER_SWATCH); }
+	inline bool isRenderNonMaterialItem(ERenderType renderType) const { return (renderType == RENDER_SCENE_NON_MATERIAL); }
+	
+	inline bool needUpdateImplicitLightConnections(ERenderType renderType) const { return (renderType == RENDER_SCENE || renderType == RENDER_SWATCH); }
+	inline bool needUpdateExplicitLightConnections(ERenderType renderType) const { return (renderType == RENDER_SCENE); }
+	inline bool overrideRasterizerState(ERenderType renderType) const { return !isRenderScene(renderType); }
+	inline bool needUpdateMayaSwatchRenderVar(ERenderType renderType) const { return (renderType == RENDER_SWATCH || renderType == RENDER_SWATCH_PROXY); }
 
+	struct RenderItemDesc
+	{
+		bool isFatLine;
+		bool isFatPoint;
+	};
+	
+public:
 	enum ELightType
 	{
 		eInvalidLight,
@@ -223,9 +239,12 @@ public:
 	bool techniqueIsTransparent() const;
 	bool techniqueSupportsAdvancedTransparency() const;
 	bool techniqueOverridesDrawState() const;
+	bool techniqueOverridesNonMaterialItems() const;
+	bool techniqueIsSelectable() const;
 
 	// Does the technique know how to render shadows or other special context?
-	bool techniqueHandlesContext(const MString& requestedContext) const;
+	bool techniqueHandlesContext(MHWRender::MDrawContext& context) const;
+	bool passHandlesContext(const MStringArray& passSemantics, unsigned int passIndex, ERenderType renderType, const RenderItemDesc* renderItemDesc = NULL) const;
 
 	// Return the active technique number. Will be -1 if none
 	int activeTechnique() const;
@@ -253,11 +272,11 @@ private:
 	// Pass Management
 public:
 	// Return the number of pass in active technique
-	int passCount() const;
+	int techniquePassCount() const;
 
 private:
 	dx11ShaderDX11Pass* activatePass( dx11ShaderDX11Device *dxDevice, dx11ShaderDX11DeviceContext *dxContext, dx11ShaderDX11EffectTechnique* dxTechnique, unsigned int passId, ERenderType renderType ) const;
-	dx11ShaderDX11Pass* activatePass( dx11ShaderDX11Device *dxDevice, dx11ShaderDX11DeviceContext *dxContext, dx11ShaderDX11EffectTechnique* dxTechnique, unsigned int passId, const MStringArray& passSem, ERenderType renderType ) const;
+	dx11ShaderDX11Pass* activatePass( dx11ShaderDX11Device *dxDevice, dx11ShaderDX11DeviceContext *dxContext, dx11ShaderDX11EffectTechnique* dxTechnique, unsigned int passId, const MStringArray& passSem, ERenderType renderType, const RenderItemDesc* renderItemDesc = NULL ) const;
 
 	bool passHasHullShader(dx11ShaderDX11Pass* dxPass) const;
 	dx11ShaderDX11InputLayout* getInputLayout(dx11ShaderDX11Device* dxDevice, dx11ShaderDX11Pass* dxPass, unsigned int numLayouts, const dx11ShaderDX11InputElementDesc* layoutDesc) const;
@@ -315,6 +334,7 @@ public:
 private:
 	typedef std::map< dx11ShaderDX11EffectShaderResourceVariable*, MHWRender::MTexture* > ResourceTextureMap;
 	bool updateParameters( const MHWRender::MDrawContext& context, MUniformParameterList& uniformParameters, ResourceTextureMap &resourceTexture, ERenderType renderType ) const;
+	void updateOverrideNonMaterialItemParameters( const MHWRender::MRenderItem* item, RenderItemDesc& renderItemDesc ) const;
 	void updateViewportGlobalParameters( const MHWRender::MDrawContext& context ) const;
 
 public:
@@ -430,6 +450,15 @@ private:
 	virtual	void setExternalContent(const MExternalContentLocationTable& table);
 
 private:
+	struct PassSpec
+	{
+		MString drawContext;
+		bool forFatLine;
+		bool forFatPoint;
+	};
+	unsigned int findMatchingPass(const PassSpec& passSpecTest) const;
+
+private:
 	// Version id, used by VP2.0 override to determine when a rebuild is necessary
 	size_t							fGeometryVersionId;
 
@@ -469,10 +498,12 @@ private:
 	// Active technique custom primitive generator that will be used to generate the index buffer.
 	MString							fTechniqueIndexBufferType;
 
+	bool							fTechniqueIsSelectable;
 	ETransparencyState				fTechniqueIsTransparent;
 	MString							fOpacityPlugName;
 	MString							fTransparencyTestProcName;
 	bool							fTechniqueSupportsAdvancedTransparency;
+	bool							fTechniqueOverridesNonMaterialItems;
 	bool							fTechniqueOverridesDrawState;
 
 	// The enum version of .technique attribute (node local dynamic attr)
@@ -480,10 +511,12 @@ private:
 
 	///////////// Pass Management
 	// Active technique pass count
-	unsigned int					fPassCount;
+	unsigned int					fTechniquePassCount;
+	typedef std::map<unsigned int, PassSpec> PassSpecMap;
+	PassSpecMap						fTechniquePassSpecs;
 
 	///////////// Uniform Parameters
-	// List of uuniform parameters.
+	// List of uniform parameters.
 	MUniformParameterList			fUniformParameters;
 
 	///////////// Varying Parameters
@@ -645,11 +678,26 @@ inline bool dx11ShaderNode::techniqueOverridesDrawState() const
 	return fTechniqueOverridesDrawState;
 }
 
+inline bool dx11ShaderNode::techniqueSupportsAdvancedTransparency() const
+{
+	return fTechniqueSupportsAdvancedTransparency;
+}
+
+inline bool dx11ShaderNode::techniqueOverridesNonMaterialItems() const
+{
+	return fTechniqueOverridesNonMaterialItems;
+}
+
+inline bool dx11ShaderNode::techniqueIsSelectable() const
+{
+	return fTechniqueIsSelectable;
+}
+
 /////////////////////////////////
 // Pass Management
-inline int dx11ShaderNode::passCount() const
+inline int dx11ShaderNode::techniquePassCount() const
 {
-	return fPassCount;
+	return fTechniquePassCount;
 }
 
 /////////////////////////////////

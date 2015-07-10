@@ -482,6 +482,19 @@ namespace
 					return true;
 				}
 			}
+			else
+			{
+				ID3DX11EffectStringVariable* strVariable = annotation->AsString();
+				if(strVariable && strVariable->IsValid())
+				{
+					LPCSTR value;
+					if( SUCCEEDED ( strVariable->GetString( &value ) ) )
+					{
+						annotationValue = (_stricmp(value, dx11ShaderAnnotationValue::kTrue) == 0);
+						return true;
+					}
+				}
+			}
 		}
 		return false;
 	}
@@ -1407,6 +1420,34 @@ namespace
 
 		return attr;
 	}
+	
+	ID3DX11EffectVariable* findEffectVariable(const MUniformParameterList& parameters, const MString& parameterName, MUniformParameter::DataType uniformType, D3D10_SHADER_VARIABLE_CLASS variableClass)
+	{
+		for( int i = 0; i < parameters.length(); ++i )
+		{
+			MUniformParameter parameter = parameters.getElement(i);
+			if( ::_stricmp(parameter.name().asChar(), parameterName.asChar()) == 0 )
+			{
+				if( parameter.type() == MUniformParameter::kTypeFloat )
+				{
+					ID3DX11EffectVariable* effectVariable = (ID3DX11EffectVariable *)parameter.userData();
+					if( effectVariable )
+					{
+						D3DX11_EFFECT_TYPE_DESC descType;
+						effectVariable->GetType()->GetDesc(&descType);
+						if( descType.Class == variableClass)
+						{
+							return effectVariable;
+						}
+					}
+				}
+				
+				return NULL;
+			}
+		}
+
+		return NULL;
+	}
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -2322,7 +2363,8 @@ void dx11ShaderNode::resetData(bool clearEffect)
 	fTechniqueIdx = -1;
 	fTechniqueName.clear();
 	fTechniqueNames.clear();
-	fPassCount = 0;
+	fTechniquePassCount = 0;
+	fTechniquePassSpecs.clear();
 
 	clearLightConnectionData();
 
@@ -2342,6 +2384,8 @@ void dx11ShaderNode::resetData(bool clearEffect)
 	fOpacityPlugName = "";
 	fTransparencyTestProcName = "";
 	fTechniqueSupportsAdvancedTransparency = false;
+	fTechniqueOverridesNonMaterialItems = false;
+	fTechniqueIsSelectable = false;
 	fTechniqueOverridesDrawState = false;
 	fForceUpdateTexture = true;
 	fFixedTextureMipMapLevels = -1;
@@ -2388,29 +2432,112 @@ void dx11ShaderNode::resetData(bool clearEffect)
 	effect pass. For example, an effect with displacement can provide
 	a special shadow pass to cast correct shadows on nearby geometries.
 */
-bool dx11ShaderNode::techniqueHandlesContext(const MString& requestedContext) const
+bool dx11ShaderNode::techniqueHandlesContext(MHWRender::MDrawContext& context) const
 {
-	bool handlesContext = false;
-
-	if(fEffect && fEffect->IsValid() && fTechnique && fTechnique->IsValid())
+	const MHWRender::MPassContext & passCtx = context.getPassContext();
+	MStringArray passSemantics = passCtx.passSemantics();
+	
+	// For color passes, only handle if there isn't already
+	// a global override. This is the same as the default
+	// logic in MPxShaderOverride::handlesDraw
+	//
+	if(passCtx.hasShaderOverride())
 	{
-		D3DX11_TECHNIQUE_DESC desc;
-		fTechnique->GetDesc(&desc);
-		for (unsigned int iPass = 0; iPass < desc.Passes && !handlesContext; ++iPass)
+		// Remove colorPassSemantic from list
+		for (unsigned int passSemIdx = 0; passSemIdx < passSemantics.length(); ) {
+			const MString& semantic = passSemantics[passSemIdx];
+			if (semantic == MHWRender::MPassContext::kColorPassSemantic) {
+				passSemantics.remove(passSemIdx);
+				continue;
+			}
+			++passSemIdx;
+		}
+	}
+
+	for (unsigned int passIndex = 0; passIndex < fTechniquePassCount; ++passIndex)
+	{
+		if( passHandlesContext(passSemantics, passIndex, RENDER_SCENE) )
+			return true;
+	}
+	return false;
+}
+
+bool dx11ShaderNode::passHandlesContext(const MStringArray& passSemantics, unsigned int passIndex, ERenderType renderType, const RenderItemDesc* renderItemDesc) const
+{
+	PassSpecMap::const_iterator it = fTechniquePassSpecs.find(passIndex);
+	if (it == fTechniquePassSpecs.end())
+		return false;
+	const PassSpec& passSpec = it->second;
+
+	bool isHandled = false;
+	for (unsigned int passSemIdx = 0; passSemIdx < passSemantics.length() && !isHandled; ++passSemIdx)
+	{
+		const MString& semantic = passSemantics[passSemIdx];
+
+		if (semantic == MHWRender::MPassContext::kColorPassSemantic)
 		{
-			ID3DX11EffectPass *dxPass = fTechnique->GetPassByIndex(iPass);
-			if(dxPass && dxPass->IsValid())
+			if(isRenderNonMaterialItem(renderType))
 			{
-				MString drawContext;
-				getAnnotation(dxPass, "drawContext", drawContext);
-				if (::_stricmp(drawContext.asChar(), requestedContext.asChar()) == 0)
+				isHandled = (::_stricmp(passSpec.drawContext.asChar(), dx11ShaderAnnotation::kNonMaterialItemsPass) == 0);
+			}
+			else
+			{
+				isHandled = (passSpec.drawContext.length() == 0) || (::_stricmp(semantic.asChar(), passSpec.drawContext.asChar()) == 0);
+			}
+		}
+		else
+		{
+			isHandled = (::_stricmp(semantic.asChar(), passSpec.drawContext.asChar()) == 0);
+		}
+
+		if (isHandled && isRenderNonMaterialItem(renderType))
+		{
+			if (renderItemDesc && renderItemDesc->isFatLine)
+			{
+				if (!passSpec.forFatLine)
 				{
-					handlesContext = true;
+					// This pass is not meant for fat line,
+					// accept only if there is no pass with the same drawContext which handles fat line
+					const PassSpec passSpecTest = { passSpec.drawContext, true, false };
+					isHandled = (findMatchingPass(passSpecTest) == (unsigned int)-1);
 				}
+			}
+			else if (renderItemDesc && renderItemDesc->isFatPoint)
+			{
+				if (!passSpec.forFatPoint)
+				{
+					// This pass is not meant for fat point,
+					// accept only if there is no pass with the same drawContext which handles fat point
+					const PassSpec passSpecTest = { passSpec.drawContext, false, true };
+					isHandled = (findMatchingPass(passSpecTest) == (unsigned int)-1);
+				}
+			}
+			else
+			{
+				isHandled = (!passSpec.forFatLine && !passSpec.forFatPoint);
 			}
 		}
 	}
-	return handlesContext;
+
+	return isHandled;
+}
+
+unsigned int dx11ShaderNode::findMatchingPass(const PassSpec& passSpecTest) const
+{
+	PassSpecMap::const_iterator it = fTechniquePassSpecs.begin();
+	PassSpecMap::const_iterator itEnd = fTechniquePassSpecs.end();
+	for(; it != itEnd; ++it)
+	{
+		const PassSpec& passSpec = it->second;
+		if( passSpec.forFatLine == passSpecTest.forFatLine &&
+			passSpec.forFatPoint == passSpecTest.forFatPoint &&
+			::_stricmp(passSpec.drawContext.asChar(), passSpecTest.drawContext.asChar()) == 0)
+		{
+			return it->first;
+		}
+	}
+
+	return (unsigned int) -1;
 }
 
 /*
@@ -2537,8 +2664,30 @@ bool dx11ShaderNode::setTechnique( int techniqueNumber )
 	// Set no active pass.
     D3DX11_TECHNIQUE_DESC desc;
     fTechnique->GetDesc(&desc);
-    fPassCount = desc.Passes;
+    fTechniquePassCount = desc.Passes;
 
+	// Build list of techniques pass specs and determine Selectable status
+	fTechniquePassSpecs.clear();
+	for (unsigned int passIndex = 0; passIndex < fTechniquePassCount; ++passIndex)
+	{
+		ID3DX11EffectPass *dxPass = fTechnique->GetPassByIndex(passIndex);
+		if(dxPass && dxPass->IsValid())
+		{
+			MString passDrawContext;
+			getAnnotation(dxPass, dx11ShaderAnnotation::kDrawContext, passDrawContext);
+			if (::_stricmp(passDrawContext.asChar(),  MHWRender::MPassContext::kSelectionPassSemantic.asChar()) == 0)
+				fTechniqueIsSelectable = true;
+
+			MString passPrimitiveFilter;
+			getAnnotation(dxPass, dx11ShaderAnnotation::kPrimitiveFilter, passPrimitiveFilter);
+			const bool passIsForFatLine  = (::_stricmp(passPrimitiveFilter.asChar(), dx11ShaderAnnotationValue::kFatLine) == 0);
+			const bool passIsForFatPoint = (::_stricmp(passPrimitiveFilter.asChar(), dx11ShaderAnnotationValue::kFatPoint) == 0);
+
+			PassSpec spec = { passDrawContext, passIsForFatLine, passIsForFatPoint };
+			fTechniquePassSpecs.insert( std::make_pair(passIndex, spec) );
+		}
+	}
+	
 	// Light names are affected by the chosen technique:
 	// -------------------------------------------------
 	clearLightConnectionData();
@@ -2662,6 +2811,10 @@ void dx11ShaderNode::initTechniqueParameters()
 	// Query technique if it supports advanced transparency algorithm.
 	fTechniqueSupportsAdvancedTransparency = false;
 	getAnnotation(fTechnique, dx11ShaderAnnotation::kSupportsAdvancedTransparency, fTechniqueSupportsAdvancedTransparency);
+	
+	// Query technique if it overrides non material items items
+	fTechniqueOverridesNonMaterialItems = false;
+	getAnnotation(fTechnique, dx11ShaderAnnotation::kOverridesNonMaterialItems, fTechniqueOverridesNonMaterialItems);
 
 	// Query technique if it has transparency
 	fTechniqueIsTransparent = eOpaque;
@@ -2678,7 +2831,7 @@ void dx11ShaderNode::initTechniqueParameters()
 			ID3D11DeviceContext *deviceContext;
 			if( S_OK == device->CreateDeferredContext(0, &deviceContext) )
 			{
-				for( unsigned int passId = 0; passId < fPassCount; ++passId)
+				for( unsigned int passId = 0; passId < fTechniquePassCount; ++passId)
 				{
 					ID3DX11EffectPass *dxPass = fTechnique->GetPassByIndex(passId);
 					if( dxPass == NULL || dxPass->IsValid() == false )
@@ -2935,11 +3088,6 @@ bool dx11ShaderNode::techniqueIsTransparent() const
 	return false;
 }
 
-bool dx11ShaderNode::techniqueSupportsAdvancedTransparency() const
-{
-	return fTechniqueSupportsAdvancedTransparency;
-}
-
 
 // ***********************************
 // Pass Management
@@ -2957,7 +3105,7 @@ dx11ShaderDX11Pass* dx11ShaderNode::activatePass( dx11ShaderDX11Device *dxDevice
 	This method does the main expensive work of setting the active pass.
 */
 dx11ShaderDX11Pass* dx11ShaderNode::activatePass( dx11ShaderDX11Device *dxDevice, dx11ShaderDX11DeviceContext *dxContext, dx11ShaderDX11EffectTechnique* dxTechnique,
-												  unsigned int passId, const MStringArray& passSem, ERenderType renderType ) const
+												  unsigned int passId, const MStringArray& passSem, ERenderType renderType, const RenderItemDesc* renderItemDesc ) const
 {
 	dx11ShaderDX11Pass* dxPass = dxTechnique->GetPassByIndex(passId);
 	if(dxPass == NULL || dxPass->IsValid() == false)
@@ -2971,28 +3119,8 @@ dx11ShaderDX11Pass* dx11ShaderNode::activatePass( dx11ShaderDX11Device *dxDevice
 		return NULL;
 	}
 
-	bool canActivate = true;
-
-	MString drawContext;
-	getAnnotation(dxPass, "drawContext", drawContext);
-	if (drawContext.length())
-	{
-		// If the shader defines pass contexts, then we must make sure we are in the right one
-		// before activating:
-		canActivate = false;
-		for (unsigned int i=0; i<passSem.length() && !canActivate; i++)
-		{
-			if (::_stricmp(passSem[i].asChar(), drawContext.asChar()) == 0)
-			{
-				canActivate = true;
-			}
-		}
-	}
-
-	if (!canActivate)
-	{
+	if( !passHandlesContext( passSem, passId, renderType, renderItemDesc ) )
 		return NULL;
-	}
 
 	// Get state block mask : identify the states changed by the pass
 	D3DX11_STATE_BLOCK_MASK stateBlockMask;
@@ -3016,7 +3144,7 @@ dx11ShaderDX11Pass* dx11ShaderNode::activatePass( dx11ShaderDX11Device *dxDevice
 
 	dxPass->Apply(0, dxContext);
 
-	if(stateBlockMask.RSRasterizerState || renderType != RENDER_SCENE)
+	if(stateBlockMask.RSRasterizerState || overrideRasterizerState(renderType))
 	{
 		// Check new rasterizer state against stored one
 		ID3D11RasterizerState* newRasterizerState;
@@ -3056,7 +3184,7 @@ dx11ShaderDX11Pass* dx11ShaderNode::activatePass( dx11ShaderDX11Device *dxDevice
 		// When a transparent material is managed internaly by Maya,
 		// it is rendered twice : once for back and again for front
 		// the effect should not override the cull mode
-		if( renderType == RENDER_SCENE &&
+		if(	isRenderScene(renderType) &&
 			techniqueIsTransparent() &&
 			fTechniqueOverridesDrawState == false &&
 			( newRasterizerDesc.CullMode != orgRasterizerDesc.CullMode ||
@@ -3068,7 +3196,7 @@ dx11ShaderDX11Pass* dx11ShaderNode::activatePass( dx11ShaderDX11Device *dxDevice
 		}
 
 		// Force back culling for swatch and uv texture render
-		if( renderType != RENDER_SCENE &&
+		if( !isRenderScene(renderType) &&
 			newRasterizerDesc.FillMode == D3D11_FILL_SOLID &&
 			newRasterizerDesc.CullMode == D3D11_CULL_NONE )
 		{
@@ -3084,7 +3212,7 @@ dx11ShaderDX11Pass* dx11ShaderNode::activatePass( dx11ShaderDX11Device *dxDevice
 		}
 	}
 
-	if(renderType != RENDER_SCENE)
+	if(!isRenderScene(renderType))
 	{
 		// Swatches require the DestBlendAlpha value to be ONE otherwise
 		// we end up with a completely transparent swatch showing the nice
@@ -3333,12 +3461,19 @@ MStatus dx11ShaderNode::renderSwatchImage( MImage & image )
 	ID3D11Device* dxDevice = (ID3D11Device*)theRenderer->GPUDeviceHandle();
 	if (!dxDevice) return MStatus::kFailure;
 
-	MHWRender::MDrawContext *context = MHWRender::MRenderUtilities::acquireSwatchDrawContext();
-	if (!context) return MStatus::kFailure;
-
 	unsigned int width, height;
 	image.getSize(width, height);
 
+	MHWRender::MRenderTargetDescription textureDesc( MString("dx11Shader_swatch_texture_target"), width, height, 0, MHWRender::kR8G8B8A8_UNORM, 1, false);
+	MHWRender::MRenderTarget* textureTarget = targetManager->acquireRenderTarget(textureDesc);
+	if (!textureTarget) return MStatus::kFailure;
+
+	MHWRender::MDrawContext *context = MHWRender::MRenderUtilities::acquireSwatchDrawContext(textureTarget);
+	if (!context) {
+		targetManager->releaseRenderTarget(textureTarget);
+		return MStatus::kFailure;
+	}
+	
 	// If no valid effect/technique/pass, create a temporary effect to use
 	ID3DX11Effect *dxEffect = NULL;
 	ID3DX11EffectTechnique *dxTechnique = fTechnique;
@@ -3349,7 +3484,7 @@ MStatus dx11ShaderNode::renderSwatchImage( MImage & image )
 	ResourceTextureMap* resourceTexture = &fResourceTextureMap;
 	MString indexBufferType = fTechniqueIndexBufferType;
 
-	unsigned int numPasses = fPassCount;
+	unsigned int numPasses = fTechniquePassCount;
 	ERenderType renderType = RENDER_SWATCH;
 	if(numPasses == 0 || dxTechnique == NULL || dxTechnique->IsValid() == false || (fUniformParameters.length() == 0 && fVaryingParameters.length() == 0))
 	{
@@ -3410,28 +3545,20 @@ MStatus dx11ShaderNode::renderSwatchImage( MImage & image )
 		MHWRender::MGeometry* geometry = acquireReferenceGeometry( MHWRender::MGeometryUtilities::kDefaultSphere, *varyingParameters );
 		if(geometry != NULL)
 		{
-			// Create texture target
-			MHWRender::MRenderTargetDescription textureDesc( MString("dx11Shader_swatch_texture_target"), width, height, 0, MHWRender::kR8G8B8A8_UNORM, 1, false);
-			MHWRender::MRenderTarget* textureTarget = targetManager->acquireRenderTarget(textureDesc);
-			if(textureTarget != NULL)
+			updateParameters(*context, *uniformParameters, *resourceTexture, renderType);
+
+			float clearColor[4]; // = { 1.0f, 0.0f, 0.0f, 1.0f };
+			MHWRender::MRenderUtilities::swatchBackgroundColor( clearColor[0], clearColor[1], clearColor[2], clearColor[3] );
+
+			// render geometry to texture target
+			if( renderTechnique(dxDevice, dxTechnique, numPasses,
+								textureTarget, width, height, clearColor,
+								geometry, MHWRender::MGeometry::kTriangles, 3,
+								*varyingParameters, renderType, indexBufferType) )
 			{
-				updateParameters(*context, *uniformParameters, *resourceTexture, renderType);
-
-				float clearColor[4]; // = { 1.0f, 0.0f, 0.0f, 1.0f };
-				MHWRender::MRenderUtilities::swatchBackgroundColor( clearColor[0], clearColor[1], clearColor[2], clearColor[3] );
-
-				// render geometry to texture target
-				if( renderTechnique(dxDevice, dxTechnique, numPasses,
-									textureTarget, width, height, clearColor,
-									geometry, MHWRender::MGeometry::kTriangles, 3,
-									*varyingParameters, renderType, indexBufferType) )
-				{
-					// At this point we have the drawing in the target texture
-					// blit texture target to swatch image
-					result = MHWRender::MRenderUtilities::blitTargetToImage(textureTarget, image);
-				}
-
-				targetManager->releaseRenderTarget(textureTarget);
+				// At this point we have the drawing in the target texture
+				// blit texture target to swatch image
+				result = MHWRender::MRenderUtilities::blitTargetToImage(textureTarget, image);
 			}
 
 			MHWRender::MGeometryUtilities::releaseReferenceGeometry( geometry );
@@ -3454,6 +3581,8 @@ MStatus dx11ShaderNode::renderSwatchImage( MImage & image )
 
 	MHWRender::MRenderUtilities::releaseDrawContext( context );
 
+	targetManager->releaseRenderTarget(textureTarget);
+	
 	return result;
 }
 
@@ -3978,8 +4107,8 @@ bool dx11ShaderNode::render(const MHWRender::MDrawContext& context, const MHWRen
 	// Draw (return true if we manage to draw anything, not necessarily everything)
 	bool result = false;
 
-	// Split items with shadows from items without, only if necessary.
-	RenderItemList shadowOnRenderVec, shadowOffRenderVec;
+	// Split items with shadows from items without, and non material override items, only if necessary.
+	RenderItemList shadowOnRenderVec, shadowOffRenderVec, nonMaterialOverrideRenderVec;
 
 	int numRenderItems = renderItemList.length();
 	for (int renderItemIdx=0; renderItemIdx < numRenderItems; ++renderItemIdx)
@@ -3987,10 +4116,15 @@ bool dx11ShaderNode::render(const MHWRender::MDrawContext& context, const MHWRen
 		const MHWRender::MRenderItem* renderItem = renderItemList.itemAt(renderItemIdx);
 		if (renderItem)
 		{
-			if (renderItem->receivesShadows() || shadowFlagBackupState.empty())
+			if (renderItem->type() ==  MHWRender::MRenderItem::OverrideNonMaterialItem) {
+				nonMaterialOverrideRenderVec.push_back(renderItem);
+			}
+			else if (renderItem->receivesShadows() || shadowFlagBackupState.empty()) {
 				shadowOnRenderVec.push_back(renderItem);
-			else
+			}
+			else {
 				shadowOffRenderVec.push_back(renderItem);
+			}
 		}
 	}
 
@@ -3998,14 +4132,20 @@ bool dx11ShaderNode::render(const MHWRender::MDrawContext& context, const MHWRen
 	{
 		if (!shadowFlagBackupState.empty())
 			setPerGeometryShadowOnFlag(true, shadowFlagBackupState);
-		result |= renderTechnique(dxDevice, dxContext, fTechnique, fPassCount, passSem, shadowOnRenderVec, fVaryingParameters, renderType, fTechniqueIndexBufferType);
+		result |= renderTechnique(dxDevice, dxContext, fTechnique, fTechniquePassCount, passSem, shadowOnRenderVec, fVaryingParameters, renderType, fTechniqueIndexBufferType);
 	}
 
 	if (!shadowOffRenderVec.empty())
 	{
 		if (!shadowFlagBackupState.empty())
 			setPerGeometryShadowOnFlag(false, shadowFlagBackupState);
-		result |= renderTechnique(dxDevice, dxContext, fTechnique, fPassCount, passSem, shadowOffRenderVec, fVaryingParameters, renderType, fTechniqueIndexBufferType);
+		result |= renderTechnique(dxDevice, dxContext, fTechnique, fTechniquePassCount, passSem, shadowOffRenderVec, fVaryingParameters, renderType, fTechniqueIndexBufferType);
+	}
+
+	if (!nonMaterialOverrideRenderVec.empty())
+	{
+		renderType = RENDER_SCENE_NON_MATERIAL;
+		result |= renderTechnique(dxDevice, dxContext, fTechnique, fTechniquePassCount, passSem, nonMaterialOverrideRenderVec, fVaryingParameters, renderType, fTechniqueIndexBufferType);
 	}
 
 	dxContext->Release();
@@ -4024,12 +4164,48 @@ bool dx11ShaderNode::renderTechnique(dx11ShaderDX11Device *dxDevice, dx11ShaderD
 {
 	bool result = false;
 
-	for(unsigned int passId = 0; passId < numPasses; ++passId)
+	if( isRenderNonMaterialItem(renderType) )
 	{
-		dx11ShaderDX11Pass* dxPass = activatePass(dxDevice, dxContext, dxTechnique, passId, passSem, renderType);
-		if(dxPass)
+		// When rendering non material items loop items first, then passes : each non material item may have different value (solidColor, lineSize, pointSize)
+		// that requires the effect variable to be updated before activating the pass.
+
+		size_t numRenderItems = renderItemList.size();
+		for (size_t renderItemIdx = 0; renderItemIdx < numRenderItems; ++renderItemIdx)
 		{
-			result |= renderPass(dxDevice, dxContext, dxPass, renderItemList, varyingParameters, renderType, indexBufferType);
+			const MHWRender::MRenderItem* renderItem = renderItemList[renderItemIdx];
+			if(renderItem)
+			{
+				const MHWRender::MGeometry* geometry = renderItem->geometry();
+				if(geometry)
+				{
+					RenderItemDesc renderItemDesc = { false, false };
+					updateOverrideNonMaterialItemParameters(renderItem, renderItemDesc);
+
+					int primitiveStride;
+					MHWRender::MGeometry::Primitive primitiveType = renderItem->primitive(primitiveStride);
+				
+					for(unsigned int passId = 0; passId < numPasses; ++passId)
+					{
+						dx11ShaderDX11Pass* dxPass = activatePass(dxDevice, dxContext, dxTechnique, passId, passSem, renderType, &renderItemDesc);
+						if(dxPass)
+						{
+							result |= renderPass(dxDevice, dxContext, dxPass, geometry, primitiveType, primitiveStride, varyingParameters, renderType, indexBufferType);
+						}
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		// Loop passes, then render items : reduce amount of pass activation
+		for(unsigned int passId = 0; passId < numPasses; ++passId)
+		{
+			dx11ShaderDX11Pass* dxPass = activatePass(dxDevice, dxContext, dxTechnique, passId, passSem, renderType);
+			if(dxPass)
+			{
+				result |= renderPass(dxDevice, dxContext, dxPass, renderItemList, varyingParameters, renderType, indexBufferType);
+			}
 		}
 	}
 
@@ -4056,6 +4232,7 @@ bool dx11ShaderNode::renderPass(dx11ShaderDX11Device *dxDevice, dx11ShaderDX11De
 			{
 				int primitiveStride;
 				MHWRender::MGeometry::Primitive primitiveType = renderItem->primitive(primitiveStride);
+				
 				result |= renderPass(dxDevice, dxContext, dxPass, geometry, primitiveType, primitiveStride, varyingParameters, renderType, indexBufferType);
 			}
 		}
@@ -4099,7 +4276,7 @@ bool dx11ShaderNode::renderTechnique(dx11ShaderDX11Device *dxDevice, dx11ShaderD
 	if(textureView == NULL)
 		return false;
 
-	if(fMayaSwatchRenderVar && (renderType == RENDER_SWATCH || renderType == RENDER_SWATCH_PROXY))
+	if(fMayaSwatchRenderVar && needUpdateMayaSwatchRenderVar(renderType))
 		fMayaSwatchRenderVar->AsScalar()->SetBool( true );
 
 	ID3D11DeviceContext* dxContext = NULL;
@@ -4126,7 +4303,7 @@ bool dx11ShaderNode::renderTechnique(dx11ShaderDX11Device *dxDevice, dx11ShaderD
 	restoreStates(dxContext, contextStates);
 	dxContext->Release();
 
-	if(fMayaSwatchRenderVar && (renderType == RENDER_SWATCH || renderType == RENDER_SWATCH_PROXY))
+	if(fMayaSwatchRenderVar && needUpdateMayaSwatchRenderVar(renderType))
 		fMayaSwatchRenderVar->AsScalar()->SetBool( false );
 
 	return result;
@@ -4148,7 +4325,7 @@ bool dx11ShaderNode::renderPass(dx11ShaderDX11Device *dxDevice, dx11ShaderDX11De
 {
 	unsigned int vtxBufferCount = (geometry != NULL ? geometry->vertexBufferCount() : 0);
 	unsigned int idxBufferCount = (geometry != NULL ? geometry->indexBufferCount() : 0);
-	if(idxBufferCount == 0 || vtxBufferCount == 0 || vtxBufferCount >= D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT)
+	if(vtxBufferCount == 0 || vtxBufferCount >= D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT)
 		return false;
 
 	bool bContainsHullShader = passHasHullShader(dxPass);
@@ -4158,7 +4335,7 @@ bool dx11ShaderNode::renderPass(dx11ShaderDX11Device *dxDevice, dx11ShaderDX11De
 	bool bAddPNAENDominantPosition = false;
 	std::vector<float> floatPNAENPositionBuffer;
 	std::vector<float> floatPNAENUVBuffer;
-	if(renderType == RENDER_SWATCH)
+	if(isRenderSwatch(renderType))
 	{
 		if(indexBufferType == "PNAEN18") {
 			bAddPNAENAdjacentEdges = true;
@@ -4180,11 +4357,14 @@ bool dx11ShaderNode::renderPass(dx11ShaderDX11Device *dxDevice, dx11ShaderDX11De
 	int							numBoundBuffers = 0;
 	MStringArray				mappedVertexBuffers;
 
+	unsigned int vertexCount = 0;
 	for (unsigned int vtxId = 0; vtxId < vtxBufferCount; ++vtxId)
 	{
 		const MHWRender::MVertexBuffer* buffer = geometry->vertexBuffer(vtxId);
 		if (buffer == NULL)
 			continue;
+		if (vertexCount == 0)
+			vertexCount = buffer->vertexCount();
 
 		const MHWRender::MVertexBufferDescriptor& desc = buffer->descriptor();
 		ID3D11Buffer* vtxBuffer = (ID3D11Buffer*)buffer->resourceHandle();
@@ -4370,113 +4550,126 @@ bool dx11ShaderNode::renderPass(dx11ShaderDX11Device *dxDevice, dx11ShaderDX11De
 
 	bool result = false;
 
-	// Setup index buffers and draw
-	for (unsigned int idxId = 0; idxId < idxBufferCount; ++idxId)
+	if( idxBufferCount == 0 )
 	{
-		const MHWRender::MIndexBuffer* buffer = geometry->indexBuffer(idxId);
-		if (buffer == NULL)
-			continue;
+		// No index buffer
+		D3D11_PRIMITIVE_TOPOLOGY topo = getPrimitiveTopology(primitiveType, primitiveStride, bContainsHullShader);
 
-		ID3D11Buffer* idxBuffer	= (ID3D11Buffer*)buffer->resourceHandle();
-		if (idxBuffer == NULL)
-			continue;
+		dxContext->IASetPrimitiveTopology(topo);
+		dxContext->Draw(vertexCount, 0);
 
-		MHWRender::MGeometry::DataType indexDataType = buffer->dataType();
-
-		DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
-		unsigned int formatSize = 0;
-		switch (indexDataType)
+		result |= true; // drew something
+	}
+	else
+	{
+		// Setup index buffers and draw
+		for (unsigned int idxId = 0; idxId < idxBufferCount; ++idxId)
 		{
-		case MHWRender::MGeometry::kChar:
-		case MHWRender::MGeometry::kUnsignedChar:
-			format = DXGI_FORMAT_R8_UINT;
-			formatSize = 1;
-			break;
-		case MHWRender::MGeometry::kInt16:
-		case MHWRender::MGeometry::kUnsignedInt16:
-			format = DXGI_FORMAT_R16_UINT;
-			formatSize = 2;
-			break;
-		case MHWRender::MGeometry::kInt32:
-		case MHWRender::MGeometry::kUnsignedInt32:
-			format = DXGI_FORMAT_R32_UINT;
-			formatSize = 4;
-			break;
-		default:
-			continue;
-		}
+			const MHWRender::MIndexBuffer* buffer = geometry->indexBuffer(idxId);
+			if (buffer == NULL)
+				continue;
 
-		unsigned int indexBufferSize = buffer->size();
+			ID3D11Buffer* idxBuffer	= (ID3D11Buffer*)buffer->resourceHandle();
+			if (idxBuffer == NULL)
+				continue;
 
-		ID3D11Buffer* customIdxBuffer = idxBuffer;
-		if (bAddPNAENAdjacentEdges && floatPNAENPositionBuffer.empty() == false && floatPNAENUVBuffer.empty() == false && formatSize != 2)
-		{
-			unsigned int indexCount = indexBufferSize;
+			MHWRender::MGeometry::DataType indexDataType = buffer->dataType();
 
-			MUintArray currentIndexBuffer;
-			currentIndexBuffer.setLength(indexCount);
-
-			MHWRender::MIndexBuffer* nonConstBuffer = const_cast<MHWRender::MIndexBuffer*>(buffer);
-
-			void* indices = nonConstBuffer->map();
-			for (unsigned int iidx = 0; iidx < indexCount; ++iidx)
+			DXGI_FORMAT format = DXGI_FORMAT_UNKNOWN;
+			unsigned int formatSize = 0;
+			switch (indexDataType)
 			{
-				switch (indexDataType)
-				{
-					case MHWRender::MGeometry::kChar:			currentIndexBuffer[iidx] = (unsigned int)((__int8*)indices)[iidx]; break;
-					case MHWRender::MGeometry::kUnsignedChar:	currentIndexBuffer[iidx] = (unsigned int)((unsigned __int8*)indices)[iidx]; break;
-					case MHWRender::MGeometry::kInt16:			currentIndexBuffer[iidx] = (unsigned int)((__int16*)indices)[iidx]; break;
-					case MHWRender::MGeometry::kUnsignedInt16:	currentIndexBuffer[iidx] = (unsigned int)((unsigned __int16*)indices)[iidx]; break;
-					case MHWRender::MGeometry::kInt32:			currentIndexBuffer[iidx] = (unsigned int)((__int32*)indices)[iidx]; break;
-					case MHWRender::MGeometry::kUnsignedInt32:	currentIndexBuffer[iidx] = (unsigned int)((unsigned __int32*)indices)[iidx]; break;
-					default:	continue;
-				}
+			case MHWRender::MGeometry::kChar:
+			case MHWRender::MGeometry::kUnsignedChar:
+				format = DXGI_FORMAT_R8_UINT;
+				formatSize = 1;
+				break;
+			case MHWRender::MGeometry::kInt16:
+			case MHWRender::MGeometry::kUnsignedInt16:
+				format = DXGI_FORMAT_R16_UINT;
+				formatSize = 2;
+				break;
+			case MHWRender::MGeometry::kInt32:
+			case MHWRender::MGeometry::kUnsignedInt32:
+				format = DXGI_FORMAT_R32_UINT;
+				formatSize = 4;
+				break;
+			default:
+				continue;
 			}
-			nonConstBuffer->unmap();
 
-			unsigned int numTri = indexCount/3;
-			unsigned int triSize = CrackFreePrimitiveGenerator::computeTriangleSize(bAddPNAENAdjacentEdges, bAddPNAENDominantEdges, bAddPNAENDominantPosition);
-			indexBufferSize = numTri * triSize;
-			unsigned int dataBufferSize = indexBufferSize * formatSize;
-			indices = new char[dataBufferSize];
-			CrackFreePrimitiveGenerator::mutateIndexBuffer( currentIndexBuffer, &floatPNAENPositionBuffer[0], &floatPNAENUVBuffer[0],
-								bAddPNAENAdjacentEdges, bAddPNAENDominantEdges, bAddPNAENDominantPosition,
-								(formatSize == 1 ? MHWRender::MGeometry::kUnsignedChar : MHWRender::MGeometry::kUnsignedInt32), indices );
+			unsigned int indexBufferSize = buffer->size();
 
-			primitiveStride = triSize;
-			primitiveType = MHWRender::MGeometry::kPatch;
+			ID3D11Buffer* customIdxBuffer = idxBuffer;
+			if (bAddPNAENAdjacentEdges && floatPNAENPositionBuffer.empty() == false && floatPNAENUVBuffer.empty() == false && formatSize != 2)
+			{
+				unsigned int indexCount = indexBufferSize;
 
-			// Create new index buffer
-			const D3D11_BUFFER_DESC bufDesc = { dataBufferSize, D3D11_USAGE_IMMUTABLE, D3D11_BIND_INDEX_BUFFER, 0, 0, 0 };
-			const D3D11_SUBRESOURCE_DATA bufData = { indices, 0, 0 };
-			customIdxBuffer = NULL;
-			dxDevice->CreateBuffer(&bufDesc, &bufData, &customIdxBuffer);
-			delete [] indices;
-		}
+				MUintArray currentIndexBuffer;
+				currentIndexBuffer.setLength(indexCount);
 
-		if (customIdxBuffer)
-		{
-			D3D11_PRIMITIVE_TOPOLOGY topo = getPrimitiveTopology(primitiveType, primitiveStride, bContainsHullShader);
-			if(topo == D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED) continue;
+				MHWRender::MIndexBuffer* nonConstBuffer = const_cast<MHWRender::MIndexBuffer*>(buffer);
 
-#ifdef PRINT_DEBUG_INFO
-			fprintf(stderr, "IDX_BUFFER_INFO: Buffer(%d), IndexingPrimType(%s), IndexType(%s), IndexCount(%d), Handle(%p)\n",
-				idxId,
-				MHWRender::MGeometry::primitiveString(primitiveType).asChar(),
-				MHWRender::MGeometry::dataTypeString(indexDataType).asChar(),
-				indexBufferSize,
-				customIdxBuffer);
-#endif
+				void* indices = nonConstBuffer->map();
+				for (unsigned int iidx = 0; iidx < indexCount; ++iidx)
+				{
+					switch (indexDataType)
+					{
+						case MHWRender::MGeometry::kChar:			currentIndexBuffer[iidx] = (unsigned int)((__int8*)indices)[iidx]; break;
+						case MHWRender::MGeometry::kUnsignedChar:	currentIndexBuffer[iidx] = (unsigned int)((unsigned __int8*)indices)[iidx]; break;
+						case MHWRender::MGeometry::kInt16:			currentIndexBuffer[iidx] = (unsigned int)((__int16*)indices)[iidx]; break;
+						case MHWRender::MGeometry::kUnsignedInt16:	currentIndexBuffer[iidx] = (unsigned int)((unsigned __int16*)indices)[iidx]; break;
+						case MHWRender::MGeometry::kInt32:			currentIndexBuffer[iidx] = (unsigned int)((__int32*)indices)[iidx]; break;
+						case MHWRender::MGeometry::kUnsignedInt32:	currentIndexBuffer[iidx] = (unsigned int)((unsigned __int32*)indices)[iidx]; break;
+						default:	continue;
+					}
+				}
+				nonConstBuffer->unmap();
 
-			// Activate index buffer and draw
-			dxContext->IASetIndexBuffer(customIdxBuffer, format, 0);
-			dxContext->IASetPrimitiveTopology(topo);
-			dxContext->DrawIndexed(indexBufferSize, 0, 0);
+				unsigned int numTri = indexCount/3;
+				unsigned int triSize = CrackFreePrimitiveGenerator::computeTriangleSize(bAddPNAENAdjacentEdges, bAddPNAENDominantEdges, bAddPNAENDominantPosition);
+				indexBufferSize = numTri * triSize;
+				unsigned int dataBufferSize = indexBufferSize * formatSize;
+				indices = new char[dataBufferSize];
+				CrackFreePrimitiveGenerator::mutateIndexBuffer( currentIndexBuffer, &floatPNAENPositionBuffer[0], &floatPNAENUVBuffer[0],
+									bAddPNAENAdjacentEdges, bAddPNAENDominantEdges, bAddPNAENDominantPosition,
+									(formatSize == 1 ? MHWRender::MGeometry::kUnsignedChar : MHWRender::MGeometry::kUnsignedInt32), indices );
 
-			result |= true; // drew something
+				primitiveStride = triSize;
+				primitiveType = MHWRender::MGeometry::kPatch;
 
-			if(customIdxBuffer != idxBuffer)
-				customIdxBuffer->Release();
+				// Create new index buffer
+				const D3D11_BUFFER_DESC bufDesc = { dataBufferSize, D3D11_USAGE_IMMUTABLE, D3D11_BIND_INDEX_BUFFER, 0, 0, 0 };
+				const D3D11_SUBRESOURCE_DATA bufData = { indices, 0, 0 };
+				customIdxBuffer = NULL;
+				dxDevice->CreateBuffer(&bufDesc, &bufData, &customIdxBuffer);
+				delete [] indices;
+			}
+
+			if (customIdxBuffer)
+			{
+				D3D11_PRIMITIVE_TOPOLOGY topo = getPrimitiveTopology(primitiveType, primitiveStride, bContainsHullShader);
+				if(topo == D3D11_PRIMITIVE_TOPOLOGY_UNDEFINED) continue;
+
+	#ifdef PRINT_DEBUG_INFO
+				fprintf(stderr, "IDX_BUFFER_INFO: Buffer(%d), IndexingPrimType(%s), IndexType(%s), IndexCount(%d), Handle(%p)\n",
+					idxId,
+					MHWRender::MGeometry::primitiveString(primitiveType).asChar(),
+					MHWRender::MGeometry::dataTypeString(indexDataType).asChar(),
+					indexBufferSize,
+					customIdxBuffer);
+	#endif
+
+				// Activate index buffer and draw
+				dxContext->IASetIndexBuffer(customIdxBuffer, format, 0);
+				dxContext->IASetPrimitiveTopology(topo);
+				dxContext->DrawIndexed(indexBufferSize, 0, 0);
+
+				result |= true; // drew something
+
+				if(customIdxBuffer != idxBuffer)
+					customIdxBuffer->Release();
+			}
 		}
 	}
 
@@ -4528,7 +4721,7 @@ bool dx11ShaderNode::updateParameters( const MHWRender::MDrawContext& context, M
 	bool updateLightParameters = true;
 	bool updateViewParams = false;
 	bool updateTextures = fForceUpdateTexture;
-	if(renderType == RENDER_SCENE)
+	if(isRenderScene(renderType))
 	{
 		// We are rendering the scene
 		MUint64 currentFrameStamp = context.getFrameStamp();
@@ -4536,8 +4729,13 @@ bool dx11ShaderNode::updateParameters( const MHWRender::MDrawContext& context, M
 		updateViewParams = (currentFrameStamp != fLastFrameStamp);
 		fLastFrameStamp = currentFrameStamp;
 		fForceUpdateTexture = false;
+
+		const MHWRender::MPassContext & passCtx = context.getPassContext();
+		const MStringArray & passSem = passCtx.passSemantics();
+		if (passSem.length() == 1 && passSem[0] == MHWRender::MPassContext::kSelectionPassSemantic)
+			updateLightParameters = false;
 	}
-	else if(renderType == RENDER_SWATCH)
+	else if(isRenderSwatch(renderType))
 	{
 		// We are rendering the swatch using current effect
 		// Reset the renderId, to be sure that the next updateParameters() will go through
@@ -4551,6 +4749,27 @@ bool dx11ShaderNode::updateParameters( const MHWRender::MDrawContext& context, M
 		updateLightParameters = false;
 		// We need to update the texture when rendering the swatch or uv texture using a custom effect
 		updateTextures = true;
+	}
+
+	bool updateTransparencyTextures = false;
+	if( isRenderScene(renderType) && techniqueIsTransparent() && techniqueSupportsAdvancedTransparency())
+	{
+		const MHWRender::MFrameContext::TransparencyAlgorithm transAlg = context.getTransparencyAlgorithm();
+		if (transAlg == MHWRender::MFrameContext::kDepthPeeling || transAlg == MHWRender::MFrameContext::kWeightedAverage)
+		{
+			const MHWRender::MPassContext & passCtx = context.getPassContext();
+			const MStringArray & passSemantics = passCtx.passSemantics();
+			for (unsigned int i = 0; i < passSemantics.length() && !updateTransparencyTextures; ++i)
+			{
+				const MString& semantic = passSemantics[i];
+				if(	semantic == MHWRender::MPassContext::kTransparentPeelSemantic ||
+					semantic == MHWRender::MPassContext::kTransparentPeelAndAvgSemantic ||
+					semantic == MHWRender::MPassContext::kTransparentWeightedAvgSemantic)
+				{
+					updateTransparencyTextures = true;
+				}
+			}
+		}
 	}
 
 	/*
@@ -4590,19 +4809,26 @@ bool dx11ShaderNode::updateParameters( const MHWRender::MDrawContext& context, M
 
 			switch( uniform.type()) {
 				case MUniformParameter::kTypeFloat: {
-
-					const float* data = uniform.getAsFloatArray(context);
-					if (data) {
-						if (descType.Class == D3D10_SVC_SCALAR) {
-							effectVariable->AsScalar()->SetFloat( data[0] );
-						} else if (descType.Class == D3D10_SVC_VECTOR) {
-							effectVariable->AsVector()->SetFloatVector( (float*)data );
-						} else if (descType.Class == D3D10_SVC_MATRIX_COLUMNS) {
-							effectVariable->AsMatrix()->SetMatrix( (float*)data );
-						} else if (descType.Class == D3D10_SVC_MATRIX_ROWS) {
-							effectVariable->AsMatrix()->SetMatrixTranspose( (float*)data );
-						} else {
-							// @@@@@ Error ?!?!
+					if (uniform.semantic() == MUniformParameter::kSemanticViewportPixelSize) {
+						int width, height;
+						context.getRenderTargetSize(width, height);
+						const float data[] = { (float)width, (float)height };
+						effectVariable->AsVector()->SetFloatVector( data );
+					}
+					else {
+						const float* data = uniform.getAsFloatArray(context);
+						if (data) {
+							if (descType.Class == D3D10_SVC_SCALAR) {
+								effectVariable->AsScalar()->SetFloat( data[0] );
+							} else if (descType.Class == D3D10_SVC_VECTOR) {
+								effectVariable->AsVector()->SetFloatVector( (float*)data );
+							} else if (descType.Class == D3D10_SVC_MATRIX_COLUMNS) {
+								effectVariable->AsMatrix()->SetMatrix( (float*)data );
+							} else if (descType.Class == D3D10_SVC_MATRIX_ROWS) {
+								effectVariable->AsMatrix()->SetMatrixTranspose( (float*)data );
+							} else {
+								// @@@@@ Error ?!?!
+							}
 						}
 					}
 				} break;
@@ -4631,14 +4857,18 @@ bool dx11ShaderNode::updateParameters( const MHWRender::MDrawContext& context, M
 						if (resourceVar) {
 							MUniformParameter::DataSemantic sem = uniform.semantic();
 							if (sem == MUniformParameter::kSemanticTranspDepthTexture) {
-								const MHWRender::MTexture *tex = context.getInternalTexture(
-									MHWRender::MDrawContext::kDepthPeelingTranspDepthTexture);
-								resourceVar->SetResource((ID3D11ShaderResourceView*)tex->resourceHandle());
+								if(updateTransparencyTextures) {
+									const MHWRender::MTexture *tex = context.getInternalTexture(
+										MHWRender::MDrawContext::kDepthPeelingTranspDepthTexture);
+									resourceVar->SetResource((ID3D11ShaderResourceView*)tex->resourceHandle());
+								}
 							}
 							else if (sem == MUniformParameter::kSemanticOpaqueDepthTexture) {
-								const MHWRender::MTexture *tex = context.getInternalTexture(
-									MHWRender::MDrawContext::kDepthPeelingOpaqueDepthTexture);
-								resourceVar->SetResource((ID3D11ShaderResourceView*)tex->resourceHandle());
+								if(updateTransparencyTextures) {
+									const MHWRender::MTexture *tex = context.getInternalTexture(
+										MHWRender::MDrawContext::kDepthPeelingOpaqueDepthTexture);
+									resourceVar->SetResource((ID3D11ShaderResourceView*)tex->resourceHandle());
+								}
 							} else {
 								MString textureName, layerName;
 								int alphaChannelIdx;
@@ -4663,6 +4893,51 @@ bool dx11ShaderNode::updateParameters( const MHWRender::MDrawContext& context, M
 	}
 
 	return true;
+}
+
+void dx11ShaderNode::updateOverrideNonMaterialItemParameters( const MHWRender::MRenderItem* item, RenderItemDesc& renderItemDesc ) const
+{
+	if (!item || item->type() != MHWRender::MRenderItem::OverrideNonMaterialItem)
+		return;
+
+	unsigned int size;
+	{
+		static const MString defaultColorParameter("defaultColor");
+		const float* defaultColor = item->getShaderFloatArrayParameter(defaultColorParameter, size);
+		if(defaultColor && size == 4) {
+			static const MString solidColorUniform("gsSolidColor");
+			ID3DX11EffectVariable* effectVariable = findEffectVariable(fUniformParameters, solidColorUniform, MUniformParameter::kTypeFloat, D3D10_SVC_VECTOR);
+			if( effectVariable != NULL ) {
+				effectVariable->AsVector()->SetFloatVector( defaultColor );
+			}
+		}
+	}
+
+	const MHWRender::MGeometry::Primitive primitive = item->primitive();
+	if( primitive == MHWRender::MGeometry::kLines || primitive == MHWRender::MGeometry::kLineStrip ) {
+		static const MString lineWidthParameter("lineWidth");
+		const float* lineWidth = item->getShaderFloatArrayParameter(lineWidthParameter, size);
+		if(lineWidth && size == 2 && lineWidth[0] > 1.f && lineWidth[1] > 1.f) {
+			renderItemDesc.isFatLine = true;
+			static const MString fatLineWidthUniform("gsFatLineWidth");
+			ID3DX11EffectVariable* effectVariable = findEffectVariable(fUniformParameters, fatLineWidthUniform, MUniformParameter::kTypeFloat, D3D10_SVC_VECTOR);
+			if( effectVariable != NULL ) {
+				effectVariable->AsVector()->SetFloatVector( lineWidth );
+			}
+		}
+	}
+	else if( primitive == MHWRender::MGeometry::kPoints ) {
+		static const MString pointSizeParameter("pointSize");
+		const float* pointSize = item->getShaderFloatArrayParameter(pointSizeParameter, size);
+		if(pointSize && size == 2 && pointSize[0] > 1.f && pointSize[1] > 1.f) {
+			renderItemDesc.isFatPoint = true;
+			static const MString fatPointSizeUniform("gsFatPointSize");
+			ID3DX11EffectVariable* effectVariable = findEffectVariable(fUniformParameters, fatPointSizeUniform, MUniformParameter::kTypeFloat, D3D10_SVC_VECTOR);
+			if( effectVariable != NULL ) {
+				effectVariable->AsVector()->SetFloatVector( pointSize );
+			}
+		}
+	}
 }
 
 void dx11ShaderNode::updateViewportGlobalParameters( const MHWRender::MDrawContext& context ) const
@@ -5702,7 +5977,7 @@ void dx11ShaderNode::disconnectLight(int lightIndex)
 */
 void dx11ShaderNode::updateImplicitLightConnections(const MHWRender::MDrawContext& context, ERenderType renderType) const
 {
-	if(renderType != RENDER_SCENE && renderType != RENDER_SWATCH)
+	if(!needUpdateImplicitLightConnections(renderType))
 		return;
 
 	bool ignoreLightLimit = true;
@@ -5716,7 +5991,8 @@ void dx11ShaderNode::updateImplicitLightConnections(const MHWRender::MDrawContex
 	bool implicitLightWasRebound = false;
 
 	// Detect headlamp scene rendering mode:
-	if(renderType == RENDER_SCENE && nbSceneLights == 1)
+	bool useDefaultLight = false;
+	if(isRenderScene(renderType) && nbSceneLights == 1)
 	{
 		MHWRender::MLightParameterInformation* sceneLightParam = context.getLightParameterInformation( 0 );
 		const ELightType sceneLightType = getLightType(sceneLightParam);
@@ -5724,7 +6000,7 @@ void dx11ShaderNode::updateImplicitLightConnections(const MHWRender::MDrawContex
 		{
 			// Swatch and headlamp are the same as far as
 			// implicit light connection is concerned:
-			renderType = RENDER_SCENE_DEFAULT_LIGHT;
+			useDefaultLight = true;
 		}
 	}
 
@@ -5746,7 +6022,7 @@ void dx11ShaderNode::updateImplicitLightConnections(const MHWRender::MDrawContex
 	// lights that were previously bound using the cached light parameter of
 	// the light group info structure. It the cached light exists, and is
 	// still available for automatic binding, we immediately reuse it.
-	if(renderType == RENDER_SCENE)
+	if(isRenderScene(renderType) && !useDefaultLight)
 	{
 		// Find out all explicitely connected lights and mark them as already
 		// bound.
@@ -5887,7 +6163,7 @@ void dx11ShaderNode::updateImplicitLightConnections(const MHWRender::MDrawContex
 				useImplicitPlug.getValue( useImplicit );
 			}
 
-			if (thisLightConnectionPlug.isConnected() || useImplicit || renderType == RENDER_SCENE_DEFAULT_LIGHT )
+			if (thisLightConnectionPlug.isConnected() || useImplicit || useDefaultLight )
 			{
 				shaderLightUsesImplicit[shaderLightIndex] = true;
 			}
@@ -5907,7 +6183,7 @@ void dx11ShaderNode::updateImplicitLightConnections(const MHWRender::MDrawContex
 	// The type of the shader light is deduced automatically first by looking for a substring
 	// match in the light "Object" annotation, then by searching the parameter name, and finally
 	// by checking which combination of position/direction semantics the light requires:
-	if(renderType == RENDER_SCENE)
+	if(isRenderScene(renderType) && !useDefaultLight)
 		fImplicitAmbientLight = -1;
 
 	for(unsigned int shaderLightIndex = 0;
@@ -5937,13 +6213,13 @@ void dx11ShaderNode::updateImplicitLightConnections(const MHWRender::MDrawContex
 
 				// Rendering swatch needs to drive all lights, except if they have a light type semantics,
 				// where we only need to drive one:
-				if (renderType != RENDER_SWATCH || shaderLightInfo.fHasLightTypeSemantics)
+				if (isRenderScene(renderType) || shaderLightInfo.fHasLightTypeSemantics)
 				{
 					sceneLightUsed[sceneLightIndex] = true;			// mark this scene light as used
 					nbSceneLightsToBind--;
 				}
 
-				if(renderType == RENDER_SCENE)
+				if(isRenderScene(renderType) && !useDefaultLight)
 				{
 					setLightRequiresShadows(shaderLightInfo.fCachedImplicitLight, true);
 
@@ -6000,13 +6276,13 @@ void dx11ShaderNode::updateImplicitLightConnections(const MHWRender::MDrawContex
 
 				// Rendering swatch needs to drive all lights, except if they have a light type semantics,
 				// where we only need to drive one:
-				if (renderType != RENDER_SWATCH || shaderLightInfo.fHasLightTypeSemantics)
+				if (isRenderScene(renderType) || shaderLightInfo.fHasLightTypeSemantics)
 				{
 					sceneLightUsed[sceneLightIndex] = true;			// mark this scene light as used
 					nbSceneLightsToBind--;
 				}
 
-				if(renderType == RENDER_SCENE)
+				if(isRenderScene(renderType) && !useDefaultLight)
 				{
 					(const_cast<LightParameterInfo&>(shaderLightInfo)).fCachedImplicitLight = sceneLightParam->lightPath().node();
 					setLightParameterLocking(shaderLightInfo, true);
@@ -6037,7 +6313,7 @@ void dx11ShaderNode::updateImplicitLightConnections(const MHWRender::MDrawContex
 
 		turnOffLight(shaderLightInfo);
 
-		if(renderType != RENDER_SCENE)
+		if(isRenderSwatch(renderType) || useDefaultLight)
 		{
 			// Will need to refresh defaults on next scene redraw:
 			(const_cast<LightParameterInfo&>(shaderLightInfo)).fIsDirty = true;
@@ -6065,7 +6341,7 @@ void dx11ShaderNode::updateImplicitLightConnections(const MHWRender::MDrawContex
 */
 void dx11ShaderNode::updateExplicitLightConnections(const MHWRender::MDrawContext& context, ERenderType renderType) const
 {
-	if(renderType != RENDER_SCENE)
+	if(!needUpdateExplicitLightConnections(renderType))
 		return;
 
 	unsigned int nbShaderLights = (unsigned int)fLightParameters.size();
@@ -6344,7 +6620,7 @@ void dx11ShaderNode::getLightParametersToUpdate(std::set<int>& parametersToUpdat
 	{
 		const LightParameterInfo& shaderLightInfo = fLightParameters[shaderLightIndex];
 
-		if (shaderLightInfo.fIsDirty || renderType != RENDER_SCENE)
+		if (shaderLightInfo.fIsDirty || !isRenderScene(renderType))
 		{
 			LightParameterInfo::TConnectableParameters::const_iterator it = shaderLightInfo.fConnectableParameters.begin();
 			LightParameterInfo::TConnectableParameters::const_iterator itEnd = shaderLightInfo.fConnectableParameters.end();
@@ -6353,7 +6629,7 @@ void dx11ShaderNode::getLightParametersToUpdate(std::set<int>& parametersToUpdat
 				parametersToUpdate.insert(it->first);
 			}
 
-			if (renderType == RENDER_SCENE)
+			if (isRenderScene(renderType))
 			{
 				// If light is implicit, it stays dirty (as we do not control
 				// what happens with the lights and need to react quickly)
@@ -6512,7 +6788,7 @@ void dx11ShaderNode::connectLight(const LightParameterInfo& lightInfo, MHWRender
 		case CUniformParameterBuilder::eLightDiffuseColor:
 			{
 				// For swatch and headlamp, we need to tone down the color if it is driving an ambient light:
-				if (renderType != RENDER_SCENE && lightInfo.fLightType == eAmbientLight)
+				if (!isRenderScene(renderType) && lightInfo.fLightType == eAmbientLight)
 				{
 					color[0] *= 0.15f;
 					color[1] *= 0.15f;

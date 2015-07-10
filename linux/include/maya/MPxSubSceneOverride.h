@@ -219,6 +219,8 @@ public:
 		const MDagPath& path,
 		MSelectionContext& selectionContext);
 
+	static bool pointSnappingActive();
+
 	MStatus setGeometryForRenderItem(
 		MRenderItem& renderItem,
 		const MVertexBufferArray& vertexBuffers,

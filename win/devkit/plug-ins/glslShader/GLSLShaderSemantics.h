@@ -123,9 +123,13 @@ namespace glslShaderAnnotation
 
 	extern const char* kOverridesDrawState;
 	extern const char* kVariableNameAsAttributeName;
+	extern const char* kExtraScale;
+	extern const char* kOverridesNonMaterialItems;
 
 	// Pass annotations
 	extern const char* kDrawContext;
+	extern const char* kNonMaterialItemsPass;
+	extern const char* kPrimitiveFilter;
 
 	// Uniform annotations
 	extern const char* kUIMin;
@@ -180,6 +184,9 @@ namespace glslShaderAnnotationValue
 	extern const char* k_Directional;
 
 	extern const char* kColorPicker;
+
+	extern const char* kFatLine;
+	extern const char* kFatPoint;
 }
 
 

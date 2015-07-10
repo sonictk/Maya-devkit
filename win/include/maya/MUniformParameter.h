@@ -178,8 +178,19 @@ public:
 		kSemanticLocalViewer,					//!< \nop
 		kSemanticViewportPixelSize,				//!< \nop
 		kSemanticBackgroundColor,				//!< \nop
-		kSemanticFrameNumber					//!< \nop
+		kSemanticFrameNumber,					//!< \nop
 
+		kSemanticHWSPrimitiveBase,				//!< \nop
+		kSemanticHWSPrimitiveCountPerInstance,	//!< \nop
+		kSemanticHWSObjectLevel,				//!< \nop
+		kSemanticHWSFaceLevel,					//!< \nop
+		kSemanticHWSEdgeLevel,					//!< \nop
+		kSemanticHWSVertexLevel,				//!< \nop
+		kSemanticHWSOccluder,					//!< \nop
+		kSemanticHWSFrontCCW,					//!< \nop
+		kSemanticHWSInstancedDraw,				//!< \nop
+		kSemanticHWSHighlighting				//!< \nop
+		
 		// NOTE - when editing this, be sure to update the internal equivalent
 	} DataSemantic;
 

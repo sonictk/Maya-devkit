@@ -22,6 +22,11 @@ def maya_useNewAPI():
 
 ## helper function
 def useSelectHighlight(selectedList, path):
+	
+	displayStatus = omr.MGeometryUtilities.displayStatus(path)
+	if (displayStatus & (omr.MGeometryUtilities.kHilite | omr.MGeometryUtilities.kActiveComponent)) != 0:
+		return True
+	
 	pathCopy = om.MDagPath(path)
 
 	while pathCopy.length() > 0:
@@ -564,6 +569,7 @@ class apiMesh(om.MPxSurfaceShape):
 		## Is the shape dirty? Used by VP2.0 sub-scene evaluator
 		##
 		self.fShapeDirty = True
+		self.fMaterialDirty = True
 
 	def compute(self, plug, datablock):
 		##
@@ -763,11 +769,17 @@ class apiMesh(om.MPxSurfaceShape):
 		##    Whenever a connection is made to this node, this method
 		##    will get called.
 		##
-		
+
 		if plug == apiMesh.inputSurface:
 			thisObj = self.thisMObject()
 			historyPlug = om.MPlug( thisObj, om.MPxSurfaceShape.mHasHistoryOnCreate )
 			historyPlug.setBool( True )
+		else:
+			thisObj = self.thisMObject()
+			dgNode = om.MFnDependencyNode( thisObj )
+			instObjGroups = dgNode.findPlug("instObjGroups", True)
+			if plug == instObjGroups:
+				self.setMaterialDirty(True)
 
 		return om.MPxNode.connectionMade(self, plug, otherPlug, asSrc )
 
@@ -783,6 +795,12 @@ class apiMesh(om.MPxSurfaceShape):
 			thisObj = self.thisMObject()
 			historyPlug = om.MPlug( thisObj, om.MPxSurfaceShape.mHasHistoryOnCreate )
 			historyPlug.setBool( False )
+		else:
+			thisObj = self.thisMObject()
+			dgNode = om.MFnDependencyNode( thisObj )
+			instObjGroups = dgNode.findPlug("instObjGroups", True)
+			if plug == instObjGroups:
+				self.setMaterialDirty(True)
 
 		return om.MPxNode.connectionBroken(self, plug, otherPlug, asSrc )
 
@@ -836,7 +854,7 @@ class apiMesh(om.MPxSurfaceShape):
 		##
 
 		if component.hasFn(om.MFn.kSingleIndexedComponent):
-			fnVtxComp = om.MFnSingleIndexedComponent( component )
+			fnVtxComp = om.MFnSingleIndexedComponent( self.convertToVertexComponent(component) )
 			thisNode = self.thisMObject()
 			plug = om.MPlug( thisNode, om.MPxSurfaceShape.mControlPoints )
 			## If this node is connected to a tweak node, reset the
@@ -992,11 +1010,13 @@ class apiMesh(om.MPxSurfaceShape):
 		##
 		## Returns
 		##
-		##    The selection mask of the shape
+		##    The mask of the selectable components of the shape
 		##
 
-		selType = om.MSelectionMask.kSelectMeshComponents
-		return om.MSelectionMask( selType )
+		selMask = om.MSelectionMask(om.MSelectionMask.kSelectMeshVerts)
+		selMask.addMask(om.MSelectionMask.kSelectMeshEdges)
+		selMask.addMask(om.MSelectionMask.kSelectMeshFaces)
+		return selMask
 
 	def localShapeInAttr(self):
 		##
@@ -1094,7 +1114,7 @@ class apiMesh(om.MPxSurfaceShape):
 
 	## Support the translate/rotate/scale tool (components)
 	##
-	def transformUsing(self, matr, componentList, cachingNode=om.MPxSurfaceShape.kNoPointCaching, pointCache=None):
+	def transformUsing(self, mat, componentList, cachingMode=om.MPxSurfaceShape.kNoPointCaching, pointCache=None):
 		##
 		## Description
 		##
@@ -1116,8 +1136,8 @@ class apiMesh(om.MPxSurfaceShape):
 
 		## Create cachingMode boolean values for clearer reading of conditional code below
 		##
-		savePoints    = (cachingMode == om.MPxSurfaceShape.kSavePoints and pointCache)
-		restorePoints = (cachingMode == om.MPxSurfaceShape.kRestorePoints and pointCache)
+		savePoints    = (cachingMode == om.MPxSurfaceShape.kSavePoints and pointCache is not None)
+		restorePoints = (cachingMode == om.MPxSurfaceShape.kRestorePoints and pointCache is not None)
 
 		cacheIndex = 0
 		cacheLen = 0
@@ -1131,7 +1151,7 @@ class apiMesh(om.MPxSurfaceShape):
 				## traverse the component list
 				##
 				for comp in componentList:
-					fnComp = om.MFnSingleIndexedComponent( comp )
+					fnComp = om.MFnSingleIndexedComponent( self.convertToVertexComponent(comp) )
 					elemCount = fnComp.elementCount
 
 					for idx in xrange(elementCount):
@@ -1164,14 +1184,14 @@ class apiMesh(om.MPxSurfaceShape):
 				##
 				setSizeIncrement = True
 				for comp in componentList:
-					fnComp = om.MFnSingleIndexedComponent( comp )
+					fnComp = om.MFnSingleIndexedComponent( self.convertToVertexComponent(comp) )
 					elemCount = fnComp.elementCount
 
 					if savePoints and setSizeIncrement:
-						pointCache.setSizeIncrement(elemCount)
+						pointCache.sizeIncrement = elemCount
 						setSizeIncrement = False
 
-					for idx in xrange(elementCount):
+					for idx in xrange(elemCount):
 						elemIndex = fnComp.element(idx)
 						if savePoints:
 							pointCache.append(geometry.vertices[elemIndex])
@@ -1185,7 +1205,7 @@ class apiMesh(om.MPxSurfaceShape):
 				##
 				vertLen = len(geometry.vertices)
 				if savePoints:
-					pointCache.setSizeIncrement(vertLen)
+					pointCache.sizeIncrement = vertLen
 
 				for idx in xrange(vertLen):
 					if savePoints:
@@ -1222,9 +1242,9 @@ class apiMesh(om.MPxSurfaceShape):
 
 		## Create cachingMode boolean values for clearer reading of conditional code below
 		##
-		savePoints    = (cachingMode == om.MPxSurfaceShape.kSavePoints and pointCache)
-		updatePoints  = (cachingMode == om.MPxSurfaceShape.kUpdatePoints and pointCache)
-		restorePoints = (cachingMode == om.MPxSurfaceShape.kRestorePoints and pointCache)
+		savePoints    = (cachingMode == om.MPxSurfaceShape.kSavePoints and pointCache is not None)
+		updatePoints  = (cachingMode == om.MPxSurfaceShape.kUpdatePoints and pointCache is not None)
+		restorePoints = (cachingMode == om.MPxSurfaceShape.kRestorePoints and pointCache is not None)
 
 		builder = handle.builder()
 
@@ -1240,7 +1260,7 @@ class apiMesh(om.MPxSurfaceShape):
 				## traverse the component list
 				##
 				for comp in componentList:
-					fnComp = om.MFnSingleIndexedComponent( comp )
+					fnComp = om.MFnSingleIndexedComponent( self.convertToVertexComponent(comp) )
 					elemCount = fnComp.elementCount
 
 					for idx in xrange(elementCount):
@@ -1276,11 +1296,11 @@ class apiMesh(om.MPxSurfaceShape):
 			if len(componentList) > 0:
 				setSizeIncrement = True
 				for comp in componentList:
-					fnComp = om.MFnSingleIndexedComponent( comp )
+					fnComp = om.MFnSingleIndexedComponent( self.convertToVertexComponent(comp) )
 					elemCount = fnComp.elementCount
 
 					if savePoints and setSizeIncrement:
-						pointCache.setSizeIncrement(elemCount)
+						pointCache.sizeIncrement = elemCount
 						setSizeIncrement = False
 
 					for idx in xrange(elementCount):
@@ -1306,7 +1326,7 @@ class apiMesh(om.MPxSurfaceShape):
 				##
 				vertLen = len(geometry.vertices)
 				if savePoints:
-					pointCache.setSizeIncrement(vertLen)
+					pointCache.sizeIncrement = vertLen
 
 				for idx in xrange(vertLen):
 					currPt = newPt = geometry.vertices[idx]
@@ -1373,10 +1393,10 @@ class apiMesh(om.MPxSurfaceShape):
 
 		## Create cachingMode boolean values for clearer reading of conditional code below
 		##
-		savePoints          = (cachingMode == om.MPxSurfaceShape.kSavePoints and pointCache)
-		updatePoints        = (cachingMode == om.MPxSurfaceShape.kUpdatePoints and pointCache)
-		restorePoints       = (cachingMode == om.MPxSurfaceShape.kRestorePoints and pointCache)
-		transformOrigPoints = (cachingMode == om.MPxSurfaceShape.kTransformOriginalPoints and pointCache)
+		savePoints          = (cachingMode == om.MPxSurfaceShape.kSavePoints and pointCache is not None)
+		updatePoints        = (cachingMode == om.MPxSurfaceShape.kUpdatePoints and pointCache is not None)
+		restorePoints       = (cachingMode == om.MPxSurfaceShape.kRestorePoints and pointCache is not None)
+		transformOrigPoints = (cachingMode == om.MPxSurfaceShape.kTransformOriginalPoints and pointCache is not None)
 
 		## Pre-calculate parameters
 		spaceInv = om.MMatrix()
@@ -1391,13 +1411,13 @@ class apiMesh(om.MPxSurfaceShape):
 		setSizeIncrement = True
 
 		for comp in componentList:
-			fnComp = om.MFnSingleIndexedComponent( comp )
+			fnComp = om.MFnSingleIndexedComponent( self.convertToVertexComponent(comp) )
 			elemCount = fnComp.elementCount
 			hasWeights = fnComp.hasWeights
 			hasSeam = (freezePlane is not None)
 
 			if savePoints and setSizeIncrement:
-				pointCache.setSizeIncrement(elemCount)
+				pointCache.sizeIncrement = elemCount
 				setSizeIncrement = False
 
 			for idx in xrange(elementCount):
@@ -1448,7 +1468,7 @@ class apiMesh(om.MPxSurfaceShape):
 		## Update the surface
 		self.updateCachedSurface( geometry, componentList )
 
-	def weightedTweakUsing(self, xform, space, componentList, cachingNode, pointCache, freezePlane, handle):
+	def weightedTweakUsing(self, xform, space, componentList, cachingMode, pointCache, freezePlane, handle):
 		##
 		## Description
 		##
@@ -1489,10 +1509,10 @@ class apiMesh(om.MPxSurfaceShape):
 
 		## Create cachingMode boolean values for clearer reading of conditional code below
 		##
-		savePoints          = (cachingMode == om.MPxSurfaceShape.kSavePoints and pointCache)
-		updatePoints        = (cachingMode == om.MPxSurfaceShape.kUpdatePoints and pointCache)
-		restorePoints       = (cachingMode == om.MPxSurfaceShape.kRestorePoints and pointCache)
-		transformOrigPoints = (cachingMode == om.MPxSurfaceShape.kTransformOriginalPoints and pointCache)
+		savePoints          = (cachingMode == om.MPxSurfaceShape.kSavePoints and pointCache is not None)
+		updatePoints        = (cachingMode == om.MPxSurfaceShape.kUpdatePoints and pointCache is not None)
+		restorePoints       = (cachingMode == om.MPxSurfaceShape.kRestorePoints and pointCache is not None)
+		transformOrigPoints = (cachingMode == om.MPxSurfaceShape.kTransformOriginalPoints and pointCache is not None)
 
 		builder = handle.builder()
 
@@ -1507,7 +1527,7 @@ class apiMesh(om.MPxSurfaceShape):
 			## traverse the component list
 			##
 			for comp in componentList:
-				fnComp = om.MFnSingleIndexedComponent( comp )
+				fnComp = om.MFnSingleIndexedComponent( self.convertToVertexComponent(comp) )
 				elemCount = fnComp.elementCount
 
 				for idx in xrange(elementCount):
@@ -1533,13 +1553,13 @@ class apiMesh(om.MPxSurfaceShape):
 				spaceInv = space.inverse()
 
 			for comp in componentList:
-				fnComp = om.MFnSingleIndexedComponent( comp )
+				fnComp = om.MFnSingleIndexedComponent( self.convertToVertexComponent(comp) )
 				elemCount = fnComp.elementCount
 				hasWeights = fnComp.hasWeights ## (for weighted transformation)
 				hasSeam = (freezePlane is not None)  ## (for weighted transformation)
 
 				if savePoints and setSizeIncrement:
-					pointCache.setSizeIncrement(elemCount)
+					pointCache.sizeIncrement = elemCount
 					setSizeIncrement = False
 
 				for idx in xrange(elementCount):
@@ -1621,7 +1641,7 @@ class apiMesh(om.MPxSurfaceShape):
 		##    True if the offsets could be calculated, False otherwise
 		##
 
-		fnComp = om.MFnSingleIndexedComponent( component )
+		fnComp = om.MFnSingleIndexedComponent( self.convertToVertexComponent(component) )
 		if component.apiType() != om.MFn.kMeshVertComponent:
 			return False
 
@@ -1699,6 +1719,9 @@ class apiMesh(om.MPxSurfaceShape):
 		##    Returns the bounding box for this object.
 		##    It is a good idea not to recompute here as this funcion is called often.
 		##
+		if self.fShapeDirty:
+			# Update:
+			self.meshObject()
 
 		thisNode = self.thisMObject()
 		c1Plug = om.MPlug( thisNode, apiMesh.bboxCorner1 )
@@ -1738,9 +1761,10 @@ class apiMesh(om.MPxSurfaceShape):
 		##
 
 		if components.isNull():
-			return apiMeshGeomIterator( self.meshGeom(), componentList )
+			vtxComponents = om.MObjectArray([self.convertToVertexComponent(c) for c in componentList])
+			return apiMeshGeomIterator( self.meshGeom(), vtxComponents )
 
-		return apiMeshGeomIterator( self.meshGeom(), components )
+		return apiMeshGeomIterator( self.meshGeom(), self.convertToVertexComponent(components) )
 
 	def acceptsGeometryIterator(self, arg0, arg1=None, arg2=None):
 		##
@@ -1792,6 +1816,23 @@ class apiMesh(om.MPxSurfaceShape):
 		##    Reset the shape dirty state of the node
 		##
 		self.fShapeDirty = False
+
+	def materialDirty(self):
+		##
+		## Description
+		##
+		##    Returns true if the shading group of the shape has been changed since
+		##    the last reset of the flag
+		##
+		return self.fMaterialDirty
+
+	def setMaterialDirty(self, dirty):
+		##
+		## Description
+		##
+		##    Reset the material dirty state of the node
+		##
+		self.fMaterialDirty = dirty
 
 	def computeInputSurface(self, plug, datablock):
 		##
@@ -1970,6 +2011,57 @@ class apiMesh(om.MPxSurfaceShape):
 		## Signal that the bounding box has changed.
 		##
 		self.childChanged( om.MPxSurfaceShape.kBoundingBoxChanged )
+		
+	def convertToVertexComponent(self, components):
+		"""
+			Converts edge and face components into vertex components. This
+			allows applying transform offsets to the vertex when edge or faces
+			are selected.
+		"""
+		retVal = components
+
+		try:
+			srcComponent = om.MFnSingleIndexedComponent(components)
+			srcComponentType = srcComponent.componentType
+		except:
+			return components
+		
+		if srcComponentType != om.MFn.kMeshVertComponent:
+			srcIndices = set(srcComponent.getElements())
+			retVal = srcComponent.create(om.MFn.kMeshVertComponent)
+			vtxComponent = om.MFnSingleIndexedComponent(retVal)
+			
+			geomPtr = self.meshGeom()
+			
+			base = 0
+			edgeId = 0
+			for faceIdx in xrange(0, geomPtr.faceCount):
+				# ignore degenerate faces
+				numVerts = geomPtr.face_counts[faceIdx]
+				if numVerts > 2:
+					for v in xrange(0, numVerts):
+						if srcComponentType == om.MFn.kMeshEdgeComponent:
+							if edgeId in srcIndices:
+								vindex1 = base + (v % numVerts)
+								vindex2 = base + ((v+1) % numVerts)
+
+								vertexId1 = geomPtr.face_connects[vindex1]
+								vertexId2 = geomPtr.face_connects[vindex2]
+
+								vtxComponent.addElement(vertexId1)
+								vtxComponent.addElement(vertexId2)
+
+							edgeId += 1
+						else:
+							# Face component:
+							if faceIdx in srcIndices:
+								vindex = base + (v % numVerts)
+								vertexId = geomPtr.face_connects[vindex]
+								vtxComponent.addElement(vertexId)
+
+					base += numVerts;
+
+		return retVal
 
 	def applyTweaks(self, datablock, geometry):
 		##
@@ -1984,18 +2076,14 @@ class apiMesh(om.MPxSurfaceShape):
 		## Loop through the component list and transform each vertex.
 		##
 		while not cpHandle.isDone():
-			elemIndex = cpHandle.elementIndex()
+			elemIndex = cpHandle.elementLogicalIndex()
 			pntHandle = cpHandle.outputValue()
 
 			offset = pntHandle.asDouble3()
 
 			## Apply the tweaks to the output surface
 			##
-			oldPnt = geometry.vertices[elemIndex]
-
-			offset = ( offset[0] + oldPnt[0], offset[1] + oldPnt[1], offset[2] + oldPnt[2] )
-
-			pntHandle.set3Double(offset)
+			geometry.vertices[elemIndex] += om.MPoint(offset[0],offset[1],offset[2])
 
 			cpHandle.next()
 
@@ -2041,30 +2129,30 @@ class apiMesh(om.MPxSurfaceShape):
 			## Loop through the component list and transform each vertex.
 			##
 			for comp in componentList:
-				fnComp = om.MFnSingleIndexedComponent( comp )
-				for elemIndex in fnComp:
-					cpHandle.jumpToElement( elemIndex )
+				fnComp = om.MFnSingleIndexedComponent( self.convertToVertexComponent(comp) )
+				for elemIndex in fnComp.getElements():
+					cpHandle.jumpToLogicalElement( elemIndex )
 					pntHandle = cpHandle.outputValue()
 
 					pnt = pntHandle.asDouble3()
 
 					oldPnt = cached.fGeometry.vertices[elemIndex]
-					newPnt = geomtry.vertices[elemIndex]
+					newPnt = geometry.vertices[elemIndex]
 					offset = newPnt - oldPnt
 
 					pnt[0] += offset[0]
 					pnt[1] += offset[1]
 					pnt[2] += offset[2]
 
-					pntHandle.set3Double(pnt)
+					pntHandle.set3Double(pnt[0], pnt[1], pnt[2])
 
 		## Copy outputSurface to cachedSurface
 		##
 		if cached:
-			cached.fGeometry.copy(geomtry)
+			cached.fGeometry.copy(geometry)
 
 		pCPs = om.MPlug( self.thisMObject(), om.MPxSurfaceShape.mControlPoints)
-		pCPs.setValue(dHandle)
+		pCPs.setMDataHandle(dHandle)
 
 		## Moving vertices will likely change the bounding box.
 		##
@@ -2200,7 +2288,7 @@ class apiMesh(om.MPxSurfaceShape):
 		##    then we will use this array to store tweaks (vertex movements).
 		##
 
-		cpH = datablock.outputArrayValue( om.MPxShapeSurface.mControlPoints )
+		cpH = datablock.outputArrayValue( om.MPxSurfaceShape.mControlPoints )
 
 		oldBuilder = cpH.builder()
 		if count != len(oldBuilder):
@@ -2859,6 +2947,12 @@ class apiMeshCreator(om.MPxNode):
 
 			vid = numV
 
+## Helper class for link lost callback
+class ShadedItemUserData(om.MUserData):
+	def __init__(self, override):
+		om.MUserData.__init__(self, False)
+		self.fOverride = override
+
 ## Custom user data class to attach to face selection render item
 ## to help with viewport 2.0 selection
 class apiMeshHWSelectionUserData(om.MUserData):
@@ -2951,7 +3045,9 @@ class simpleComponentConverter_subsceneOverride(omr.MPxComponentConverter):
 	## creator function to instanciate a component converter for vertex selection
 	@staticmethod
 	def creatorVertexSelection():
-		return simpleComponentConverter_subsceneOverride(om.MFn.kMeshVertComponent, om.MSelectionMask.kSelectMeshVerts)
+		mask = om.MSelectionMask(om.MSelectionMask.kSelectMeshVerts)
+		mask.addMask(om.MSelectionMask.kSelectPointsForGravity)
+		return simpleComponentConverter_subsceneOverride(om.MFn.kMeshVertComponent, mask)
 
 	## creator function to instanciate a component converter for edge selection
 	@staticmethod
@@ -2986,6 +3082,14 @@ class apiMeshSubSceneOverride(omr.MPxSubSceneOverride):
 	@staticmethod
 	def creator(obj):
 		return apiMeshSubSceneOverride(obj)
+
+	@staticmethod
+	def shadedItemLinkLost(userData):
+		if not userData is None and not userData.fOverride is None:
+			if not userData.fOverride.fMesh is None:
+				userData.fOverride.fMesh.setMaterialDirty(True)
+			userData.fOverride = None
+		userData = None
 
 	def __init__(self, obj):
 		omr.MPxSubSceneOverride.__init__(self, obj)
@@ -3302,7 +3406,9 @@ class apiMeshSubSceneOverride(omr.MPxSubSceneOverride):
 			itemsChanged = True
 
 		## Update shader for shaded item
-		if not self.fShadedShader:
+		if self.fMesh.materialDirty() or (self.fShadedShader is None and not shadedItem.isShaderFromNode()):
+			hasSetShaderFromNode = False
+
 			## Grab shading node from first component of first instance of the
 			## object and use it to get an MShaderInstance. This could be expanded
 			## to support full instancing and components if necessary.
@@ -3312,14 +3418,23 @@ class apiMeshSubSceneOverride(omr.MPxSubSceneOverride):
 					dn = om.MFnDependencyNode(obj)
 					shaderPlug = dn.findPlug("surfaceShader", True)
 					connectedPlugs = shaderPlug.connectedTo(True, False)
+
 					if len(connectedPlugs) > 0:
-						self.fShadedShader = shaderMgr.getShaderFromNode(connectedPlugs[0].node(), instances[0])
+						userData = ShadedItemUserData(self)
+
+						if shadedItem.setShaderFromNode(connectedPlugs[0].node(), instances[0], apiMeshSubSceneOverride.shadedItemLinkLost, userData):
+							hasSetShaderFromNode = True
+							break;
 			except:
 				pass
-			if not self.fShadedShader:
-				self.fShadedShader = shaderMgr.getStockShader(omr.MShaderManager.k3dBlinnShader)
 
-			shadedItem.setShader(self.fShadedShader)
+			if not hasSetShaderFromNode:
+				if not self.fShadedShader:
+					self.fShadedShader = shaderMgr.getStockShader(omr.MShaderManager.k3dBlinnShader)
+
+				shadedItem.setShader(self.fShadedShader)
+
+			self.fMesh.setMaterialDirty(False)
 
 		# render item for vertex selection
 		vertexSelectionItem = container.find(self.sVertexSelectionName)
@@ -3328,7 +3443,9 @@ class apiMeshSubSceneOverride(omr.MPxSubSceneOverride):
 			# use for selection only : not visible in viewport
 			vertexSelectionItem.setDrawMode(omr.MGeometry.kSelectionOnly)
 			# set the selection mask to kSelectMeshVerts : we want the render item to be used for Vertex Components selection
-			vertexSelectionItem.setSelectionMask( om.MSelectionMask.kSelectMeshVerts )
+			mask = om.MSelectionMask(om.MSelectionMask.kSelectMeshVerts)
+			mask.addMask(om.MSelectionMask.kSelectPointsForGravity)
+			vertexSelectionItem.setSelectionMask( mask )
 			# set selection priority : on top
 			vertexSelectionItem.setDepthPriority(omr.MRenderItem.sSelectionDepthPriority)
 			vertexSelectionItem.setShader(self.fVertexComponentShader)
@@ -3629,6 +3746,7 @@ class apiMeshSubSceneOverride(omr.MPxSubSceneOverride):
 		## Compute mesh data size
 		numTriangles = 0
 		totalVerts = 0
+		totalPoints = len(meshGeom.vertices)
 		for i in xrange(meshGeom.faceCount):
 			numVerts = meshGeom.face_counts[i]
 			if numVerts > 2:
@@ -3643,8 +3761,8 @@ class apiMeshSubSceneOverride(omr.MPxSubSceneOverride):
 		self.fNormalBuffer = omr.MVertexBuffer(normalDesc)
 		self.fBoxPositionBuffer = omr.MVertexBuffer(posDesc)
 
-		positionDataAddress = self.fPositionBuffer.acquire(totalVerts, True)
-		normalDataAddress = self.fNormalBuffer.acquire(totalVerts, True)
+		positionDataAddress = self.fPositionBuffer.acquire(totalPoints, True)
+		normalDataAddress = self.fNormalBuffer.acquire(totalPoints, True)
 		boxPositionDataAddress = self.fBoxPositionBuffer.acquire(8, True)
 
 		## Acquire index buffer resources
@@ -3654,7 +3772,7 @@ class apiMeshSubSceneOverride(omr.MPxSubSceneOverride):
 		self.fShadedIndexBuffer = omr.MIndexBuffer(omr.MGeometry.kUnsignedInt32)
 
 		wireBufferDataAddress = self.fWireIndexBuffer.acquire(2*totalVerts, True)
-		vertexBufferDataAddress = self.fVertexIndexBuffer.acquire(totalVerts, True)
+		vertexBufferDataAddress = self.fVertexIndexBuffer.acquire(totalPoints, True)
 		boxBufferDataAddress = self.fBoxIndexBuffer.acquire(24, True)
 		shadedBufferDataAddress = self.fShadedIndexBuffer.acquire(3*numTriangles, True)
 
@@ -3664,36 +3782,25 @@ class apiMeshSubSceneOverride(omr.MPxSubSceneOverride):
 			self.clearGeometryBuffers()
 			return
 
-		positionData = ((ctypes.c_float * 3)*totalVerts).from_address(positionDataAddress)
-		normalData = ((ctypes.c_float * 3)*totalVerts).from_address(normalDataAddress)
+		positionData = ((ctypes.c_float * 3)*totalPoints).from_address(positionDataAddress)
+		normalData = ((ctypes.c_float * 3)*totalPoints).from_address(normalDataAddress)
 		boxPositionData = ((ctypes.c_float * 3)*8).from_address(boxPositionDataAddress)
 
 		wireBufferData = (ctypes.c_uint * (2*totalVerts)).from_address(wireBufferDataAddress)
-		vertexBufferData = (ctypes.c_uint * totalVerts).from_address(vertexBufferDataAddress)
+		vertexBufferData = (ctypes.c_uint * totalPoints).from_address(vertexBufferDataAddress)
 		boxBufferData = (ctypes.c_uint * 24).from_address(boxBufferDataAddress)
 		shadedBufferData = ((ctypes.c_uint * 3)*numTriangles).from_address(shadedBufferDataAddress)
 
 		## Fill vertex data for shaded/wireframe
-		vid = 0
-		for i in xrange(meshGeom.faceCount):
-			## Ignore degenerate faces
-			numVerts = meshGeom.face_counts[i]
-			if numVerts > 2:
-				for j in xrange(numVerts):
-					position = meshGeom.vertices[meshGeom.face_connects[vid]]
-					positionData[vid][0] = position[0]
-					positionData[vid][1] = position[1]
-					positionData[vid][2] = position[2]
+		for vid,position in enumerate(meshGeom.vertices):
+			positionData[vid][0] = position[0]
+			positionData[vid][1] = position[1]
+			positionData[vid][2] = position[2]
 
-					normal = meshGeom.normals[meshGeom.face_connects[vid]]
-					normalData[vid][0] = normal[0]
-					normalData[vid][1] = normal[1]
-					normalData[vid][2] = normal[2]
-
-					vid += 1
-
-			elif numVerts > 0:
-				vid += numVerts
+		for vid,normal in enumerate(meshGeom.normals):
+			normalData[vid][0] = normal[0]
+			normalData[vid][1] = normal[1]
+			normalData[vid][2] = normal[2]
 
 		self.fPositionBuffer.commit(positionDataAddress)
 		positionDataAddress = None
@@ -3748,38 +3855,38 @@ class apiMeshSubSceneOverride(omr.MPxSubSceneOverride):
 			if numVerts > 2:
 				first = vid
 				for v in xrange(numVerts-1):
-					wireBufferData[idx] = vid
+					wireBufferData[idx] = meshGeom.face_connects[vid]
 					idx += 1
 					vid += 1
-					wireBufferData[idx] = vid
+					wireBufferData[idx] = meshGeom.face_connects[vid]
 					idx += 1
 
-				wireBufferData[idx] = vid
+				wireBufferData[idx] = meshGeom.face_connects[vid]
 				idx += 1
 				vid += 1
-				wireBufferData[idx] = first
+				wireBufferData[idx] = meshGeom.face_connects[first]
 				idx += 1
 
 			else:
 				vid += numVerts
 
 		self.fWireIndexBuffer.commit(wireBufferDataAddress)
-   		wireBufferDataAddress = None
+		wireBufferDataAddress = None
 
 		## Fill index data for vertices
-		for i in xrange(totalVerts):
+		for i in xrange(totalPoints):
 			vertexBufferData[i] = i
 
 		self.fVertexIndexBuffer.commit(vertexBufferDataAddress)
-   		vertexBufferDataAddress = None
+		vertexBufferDataAddress = None
 
-		## Fill index data for box
+		## Fill index data for bounding box
 		indexData = [ 0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7 ]
 		for i in xrange(24):
 			boxBufferData[i] = indexData[i]
 
 		self.fBoxIndexBuffer.commit(boxBufferDataAddress)
-   		boxBufferDataAddress = None
+		boxBufferDataAddress = None
 
 		## Fill index data for shaded
 		base = 0
@@ -3789,15 +3896,15 @@ class apiMeshSubSceneOverride(omr.MPxSubSceneOverride):
 			numVerts = meshGeom.face_counts[i]
 			if numVerts > 2:
 				for v in xrange(1, numVerts-1):
-					shadedBufferData[idx][0] = base
-					shadedBufferData[idx][1] = base+v
-					shadedBufferData[idx][2] = base+v+1
+					shadedBufferData[idx][0] = meshGeom.face_connects[base]
+					shadedBufferData[idx][1] = meshGeom.face_connects[base+v]
+					shadedBufferData[idx][2] = meshGeom.face_connects[base+v+1]
 					idx += 1
 
 				base += numVerts
 		
 		self.fShadedIndexBuffer.commit(shadedBufferDataAddress)
-   		shadedBufferDataAddress = None
+		shadedBufferDataAddress = None
 
 	def rebuildActiveComponentIndexBuffers(self):
 		## Preamble
@@ -3843,15 +3950,15 @@ class apiMeshSubSceneOverride(omr.MPxSubSceneOverride):
 						first = vid
 						for v in xrange(numVerts-1):
 							if eid in self.fActiveEdgesSet:
-								activeEdgesData[idx][0] = vid
-								activeEdgesData[idx][1] = vid + 1
+								activeEdgesData[idx][0] = meshGeom.face_connects[vid]
+								activeEdgesData[idx][1] = meshGeom.face_connects[vid + 1]
 								idx += 1
 							vid += 1
 							eid += 1
 
 						if eid in self.fActiveEdgesSet:
-							activeEdgesData[idx][0] = vid
-							activeEdgesData[idx][1] = first
+							activeEdgesData[idx][0] = meshGeom.face_connects[vid]
+							activeEdgesData[idx][1] = meshGeom.face_connects[first]
 							idx += 1
 						vid += 1
 						eid += 1
@@ -3883,9 +3990,9 @@ class apiMeshSubSceneOverride(omr.MPxSubSceneOverride):
 					if numVerts > 2:
 						if i in self.fActiveFacesSet:
 							for v in xrange(1, numVerts-1):
-								activeFacesData[idx][0] = vid
-								activeFacesData[idx][1] = vid+v
-								activeFacesData[idx][2] = vid+v+1
+								activeFacesData[idx][0] = meshGeom.face_connects[vid]
+								activeFacesData[idx][1] = meshGeom.face_connects[vid+v]
+								activeFacesData[idx][2] = meshGeom.face_connects[vid+v+1]
 								idx += 1
 
 						vid += numVerts
@@ -3912,7 +4019,7 @@ class apiMeshSubSceneOverride(omr.MPxSubSceneOverride):
 
 	def updateSelectionGranularity(self, path, selectionContext):
 		## This is method is called during the pre-filtering phase of the viewport 2.0 selection
-   		## and is used to setup the selection context of the given DAG object.
+		## and is used to setup the selection context of the given DAG object.
 
 		## We want the whole shape to be selectable, so we set the selection level to kObject so that the shape
 		## will be processed by the selection.
@@ -3921,13 +4028,22 @@ class apiMeshSubSceneOverride(omr.MPxSubSceneOverride):
 		## since we have created render items that can be use in the selection phase (kSelectionOnly draw mode)
 		## and we also registered component converters to handle this render items,
 		## we can set the selection level to kComponent so that the shape will also be processed by the selection.
-
-		level = omr.MSelectionContext.kObject
+		displayStatus = omr.MGeometryUtilities.displayStatus(path)
+		if (displayStatus & omr.MGeometryUtilities.kHilite) != 0:
 	
-		if om.MGlobal.selectionMode() == om.MGlobal.kSelectComponentMode:
-			level = omr.MSelectionContext.kComponent
+			globalComponentMask = om.MGlobal.objectSelectionMask()
+			if om.MGlobal.selectionMode() == om.MGlobal.kSelectComponentMode:
+				globalComponentMask = om.MGlobal.componentSelectionMask()
 
-		selectionContext.selectionLevel = level
+			supportedComponentMask = om.MSelectionMask( om.MSelectionMask.kSelectMeshVerts )
+			supportedComponentMask.addMask( om.MSelectionMask.kSelectMeshEdges )
+			supportedComponentMask.addMask( om.MSelectionMask.kSelectMeshFaces )
+			supportedComponentMask.addMask( om.MSelectionMask.kSelectPointsForGravity )
+			
+			if globalComponentMask.intersects(supportedComponentMask):
+				selectionContext.selectionLevel = omr.MSelectionContext.kComponent
+		elif omr.MPxSubSceneOverride.pointSnappingActive():
+			selectionContext.selectionLevel = omr.MSelectionContext.kComponent
 
 
 ################################################################################
@@ -4026,7 +4142,9 @@ class meshVertComponentConverter_geometryOverride(omr.MPxComponentConverter):
 
 	def selectionMask(self):
 		## This converter is only valid for vertex selection
-		return om.MSelectionMask.kSelectMeshVerts
+		mask = om.MSelectionMask(om.MSelectionMask.kSelectMeshVerts)
+		mask.addMask(om.MSelectionMask.kSelectPointsForGravity)
+		return mask
 
 	@staticmethod
 	def creator():
@@ -4469,7 +4587,7 @@ class apiMeshGeometryOverride(omr.MPxGeometryOverride):
 
 	def updateSelectionGranularity(self, path, selectionContext):
 		## This is method is called during the pre-filtering phase of the viewport 2.0 selection
-   		## and is used to setup the selection context of the given DAG object.
+		## and is used to setup the selection context of the given DAG object.
 
 		## We want the whole shape to be selectable, so we set the selection level to kObject so that the shape
 		## will be processed by the selection.
@@ -4479,12 +4597,22 @@ class apiMeshGeometryOverride(omr.MPxGeometryOverride):
 		## and we also registered component converters to handle this render items,
 		## we can set the selection level to kComponent so that the shape will also be processed by the selection.
 
-		level = omr.MSelectionContext.kObject
+		displayStatus = omr.MGeometryUtilities.displayStatus(path)
+		if (displayStatus & omr.MGeometryUtilities.kHilite) != 0:
 	
-		if om.MGlobal.selectionMode() == om.MGlobal.kSelectComponentMode:
-			level = omr.MSelectionContext.kComponent
+			globalComponentMask = om.MGlobal.objectSelectionMask()
+			if om.MGlobal.selectionMode() == om.MGlobal.kSelectComponentMode:
+				globalComponentMask = om.MGlobal.componentSelectionMask()
 
-		selectionContext.selectionLevel = level
+			supportedComponentMask = om.MSelectionMask( om.MSelectionMask.kSelectMeshVerts )
+			supportedComponentMask.addMask( om.MSelectionMask.kSelectMeshEdges )
+			supportedComponentMask.addMask( om.MSelectionMask.kSelectMeshFaces )
+			supportedComponentMask.addMask( om.MSelectionMask.kSelectPointsForGravity )
+			
+			if globalComponentMask.intersects(supportedComponentMask):
+				selectionContext.selectionLevel = omr.MSelectionContext.kComponent
+		elif omr.MPxGeometryOverride.pointSnappingActive():
+			selectionContext.selectionLevel = omr.MSelectionContext.kComponent
 
 	def printShader(self, shader):
 		## Some example code to print out shader parameters
@@ -4572,7 +4700,7 @@ class apiMeshGeometryOverride(omr.MPxGeometryOverride):
 		## internal objects behave
 		##
 		displayStatus = omr.MGeometryUtilities.displayStatus(path)
-		if displayStatus == omr.MGeometryUtilities.kTemplate or displayStatus == omr.MGeometryUtilities.kActiveTemplate:
+		if (displayStatus & (omr.MGeometryUtilities.kHilite | omr.MGeometryUtilities.kActiveComponent)) == 0:
 			enable = False
 		
 		else:
@@ -4883,7 +5011,9 @@ class apiMeshGeometryOverride(omr.MPxGeometryOverride):
 			vertexItem.setDrawMode(omr.MGeometry.kAll)
 
 			## Set the selection mask to kSelectMeshVerts : we want the render item to be used for Vertex Components selection
-			vertexItem.setSelectionMask( om.MSelectionMask.kSelectMeshVerts )
+			mask = om.MSelectionMask(om.MSelectionMask.kSelectMeshVerts)
+			mask.addMask(om.MSelectionMask.kSelectPointsForGravity)
+			vertexItem.setSelectionMask( mask )
 
 			## Set depth priority higher than wireframe and shaded render items,
 			## but lower than active points.
@@ -4915,7 +5045,7 @@ class apiMeshGeometryOverride(omr.MPxGeometryOverride):
 
 			## Generally if the display status is hilite then we
 			## draw components.
-			if displayStatus == omr.MGeometryUtilities.kHilite:
+			if displayStatus == omr.MGeometryUtilities.kHilite or omr.MPxGeometryOverride.pointSnappingActive():
 				## In case the object is templated
 				## we will hide the components to be consistent
 				## with how internal objects behave.

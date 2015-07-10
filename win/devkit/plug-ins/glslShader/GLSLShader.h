@@ -34,6 +34,14 @@ public:
 		RENDER_UVTEXTURE,			// Render a texture for the UV editor
 		RENDER_SCENE_DEFAULT_LIGHT	// Render the scene using a default light
 	};
+
+	struct RenderItemDesc
+	{
+		bool isOverrideNonMaterialItem;
+		bool isFatLine;
+		bool isFatPoint;
+	};
+
 public:
 	GLSLShaderNode();
 	~GLSLShaderNode();
@@ -50,13 +58,14 @@ public:
 	const MString& effectName() const;
 
 	void clearParameters();
-	void updateParameters(const MHWRender::MDrawContext& _context, ERenderType renderType = RENDER_SCENE) const;
+	void updateParameters(const MHWRender::MDrawContext& context, ERenderType renderType = RENDER_SCENE) const;
+	void updateOverrideNonMaterialItemParameters(const MHWRender::MDrawContext& context, const MHWRender::MRenderItem* item, RenderItemDesc& renderItemDesc) const;
 
-	MHWRender::MShaderInstance * GetGLSLShaderInstance() const { return fGLSLShaderInstance; }
+	MHWRender::MShaderInstance* GetGLSLShaderInstance() const { return fGLSLShaderInstance; }
+	const MHWRender::MVertexBufferDescriptorList& geometryRequirements() const { return fGeometryRequirements; }
 
-	void configureUniforms();
-
-	bool rebuildAlways() const { return fNeedsRebuild; }
+	bool hasUpdatedVaryingInput() const;
+	void updateGeometryRequirements();
 
 	MTypeId	typeId() const;
 	static MTypeId TypeID();
@@ -75,9 +84,12 @@ public:
 	MString techniqueName() const { return fTechniqueName; }
 	MStringArray techniqueNames() const { return fTechniqueNames; }
 
+	bool techniqueIsSelectable() const { return fTechniqueIsSelectable; }
 	bool techniqueIsTransparent() const { return fTechniqueIsTransparent; }
 	bool techniqueSupportsAdvancedTransparency() const { return fTechniqueSupportsAdvancedTransparency; }
 	bool techniqueOverridesDrawState() const { return fTechniqueOverridesDrawState; }
+	double techniqueBBoxExtraScale() const { return fTechniqueBBoxExtraScale; }
+	bool techniqueOverridesNonMaterialItems() const { return fTechniqueOverridesNonMaterialItems; }
 
 	const MString& techniqueIndexBufferType() const { return fTechniqueIndexBufferType; }
 
@@ -144,10 +156,11 @@ public:
 		LightParameterInfo(
 			int lightIndex,
 			ELightType lightType = GLSLShaderNode::eInvalidLight,
-			bool hasLightTypeSemantics = false):
-		mLightIndex(lightIndex),
-			mLightType(lightType),
-			fHasLightTypeSemantics(hasLightTypeSemantics)
+			bool hasLightTypeSemantics = false)
+		: mLightIndex(lightIndex)
+		, mLightType(lightType)
+		, fIsDirty(true)
+		, fHasLightTypeSemantics(hasLightTypeSemantics)
 		{
 
 		}
@@ -174,13 +187,16 @@ public:
 	int getIndexForLightName(const MString& lightName, bool appendLight = false);
 
 	const MStringArray& lightInfoDescription() const { return fLightDescriptions; }
-	void clearLightConnectionData();
+	void clearLightConnectionData(bool refreshAE=true);
 	MString getLightConnectionInfo(int lightIndex);
 	void connectLight(int lightIndex, MDagPath lightPath);
 
-	bool passHandlesContext(MHWRender::MDrawContext& context, int passIndex) const;
+	bool techniqueHandlesContext(MHWRender::MDrawContext& context) const;
+	bool passHandlesContext(MHWRender::MDrawContext& context, unsigned int passIndex, const RenderItemDesc* renderItemDesc = NULL) const;
 
 private:
+	void configureUniforms();
+	void configureGeometryRequirements();
 
 	void updateImplicitLightConnections(const MHWRender::MDrawContext& context, ERenderType renderType) const;
 	void updateExplicitLightConnections(const MHWRender::MDrawContext& context, ERenderType renderType) const;
@@ -191,7 +207,7 @@ private:
 	void updateImplicitLightParameterCache();
 
 	void refreshView() const;
-	void setLightParameterLocking(const LightParameterInfo& lightInfo, bool locked) const;
+	void setLightParameterLocking(const LightParameterInfo& lightInfo, bool locked, bool refreshAE=true) const;
 	void getLightParametersToUpdate(std::set<int>& parametersToUpdate, ERenderType renderType) const;
 
 	bool appendParameterNameIfVisible(int paramIndex, MStringArray& paramArray) const;
@@ -224,14 +240,26 @@ private:
 	MString uniformUserDataToMString(void* userData) const;
 
 private:
+	struct PassSpec
+	{
+		MString drawContext;
+		bool forFatLine;
+		bool forFatPoint;
+	};
+	unsigned int findMatchingPass(MHWRender::MDrawContext& context, const PassSpec& passSpecTest) const;
+
+private:
 
 	bool							fEffectLoaded;
-	bool							fNeedsRebuild;
 
 	MString							fEffectName;
 
 	MUniformParameterList			fUniformParameters;
 	std::vector<MString*>			fUniformUserData;
+
+	MHWRender::MVertexBufferDescriptorList	fGeometryRequirements;
+	MVaryingParameterList			fVaryingParameters;
+	unsigned int					fVaryingParametersUpdateId;
 
 	MHWRender::MShaderInstance *	fGLSLShaderInstance;
 
@@ -248,11 +276,18 @@ private:
 	MObject							fTechniqueEnumAttr;
 	int								fTechniqueIdx;
 
+	bool							fTechniqueIsSelectable;
 	bool							fTechniqueIsTransparent;
 	bool							fTechniqueSupportsAdvancedTransparency;
 	MString							fTechniqueIndexBufferType;
 	bool							fTechniqueOverridesDrawState;
 	int								fTechniqueTextureMipmapLevels;
+	double							fTechniqueBBoxExtraScale;
+	bool							fTechniqueOverridesNonMaterialItems;
+
+	unsigned int					fTechniquePassCount;
+	typedef std::map<unsigned int, PassSpec> PassSpecMap;
+	PassSpecMap						fTechniquePassSpecs;
 
 	//Lighting
 	typedef std::vector<LightParameterInfo> LightParameterInfoVec;

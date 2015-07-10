@@ -69,7 +69,7 @@ MString dx11ShaderOverride::initialize(const MInitContext& initContext,MInitFeed
 			dx11ShaderDX11EffectTechnique* technique = fShaderNode->technique();
 			if (technique)
 			{
-				int passCount = fShaderNode->passCount();
+				int passCount = fShaderNode->techniquePassCount();
 				if (passCount > 0)
 				{
 					// Take signature from first pass (assume all equal)
@@ -112,7 +112,12 @@ MString dx11ShaderOverride::initialize(const MInitContext& initContext,MInitFeed
 	result += MString(", effectFileName=");
 	result += fShaderNode ? fShaderNode->effectName() : MString("null");
 	result += MString(", technique=");
-	result += (fShaderNode) ? fShaderNode->activeTechniqueName() : MString("null");
+	result += fShaderNode ? fShaderNode->activeTechniqueName() : MString("null");
+	if(fShaderNode && fShaderNode->techniqueIsSelectable()) {
+		// adding "selectable=true" is required to have shader instance selectable
+		result += MString(", selectable=true");
+	}
+	
 	return result;
 }
 
@@ -130,36 +135,7 @@ void dx11ShaderOverride::endUpdate()
 
 bool dx11ShaderOverride::handlesDraw(MHWRender::MDrawContext& context)
 {
-	const MHWRender::MPassContext & passCtx = context.getPassContext();
-	const MStringArray & passSem = passCtx.passSemantics();
-
-	// For color passes, only handle if there isn't already
-	// a global override. This is the same as the default
-	// logic for this method in MPxShaderOverride
-	//
-	bool handlePass = false;
-	for (unsigned int i=0; i<passSem.length() && !handlePass; i++)
-	{
-		if (passSem[i] == MHWRender::MPassContext::kColorPassSemantic)
-		{
-			bool hasOverrideShader = passCtx.hasShaderOverride();
-			if (!hasOverrideShader)
-				handlePass = true;
-		}
-
-		// Handle special pass drawing.
-		//
-		else if (passSem[i] == MHWRender::MPassContext::kShadowPassSemantic ||
-				 passSem[i] == MHWRender::MPassContext::kDepthPassSemantic ||
-				 passSem[i] == MHWRender::MPassContext::kNormalDepthPassSemantic ||
-				 passSem[i] == MHWRender::MPassContext::kTransparentPeelSemantic ||
-				 passSem[i] == MHWRender::MPassContext::kTransparentPeelAndAvgSemantic ||
-				 passSem[i] == MHWRender::MPassContext::kTransparentWeightedAvgSemantic)
-		{
-			handlePass = fShaderNode->techniqueHandlesContext(passSem[i]);
-		}
-	}
-	return handlePass;
+	return (fShaderNode && fShaderNode->techniqueHandlesContext(context));
 }
 
 void dx11ShaderOverride::activateKey(MHWRender::MDrawContext& context, const MString& /*key*/)
@@ -270,8 +246,10 @@ bool dx11ShaderOverride::rebuildAlways()
 
 double dx11ShaderOverride::boundingBoxExtraScale() const
 {
-	if(fShaderNode != NULL)
-		fBBoxExtraScale = fShaderNode->boundingBoxExtraScale();
+	return fShaderNode ? fShaderNode->boundingBoxExtraScale() : fBBoxExtraScale;
+}
 
-	return fBBoxExtraScale;
+bool dx11ShaderOverride::overridesNonMaterialItems() const
+{
+	return fShaderNode ? fShaderNode->techniqueOverridesNonMaterialItems() : false;
 }

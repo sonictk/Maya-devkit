@@ -197,8 +197,11 @@ public:
 
 	virtual MSelectionMask selectionMask() const
 	{
-		// This converter is only valid for vertex selection
-		return MSelectionMask::kSelectMeshVerts;
+		// This converter is only valid for vertex selection or snapping
+		MSelectionMask retVal;
+		retVal.setMask(MSelectionMask::kSelectMeshVerts);
+		retVal.addMask(MSelectionMask::kSelectPointsForGravity);
+		return retVal;
 	}
 
 	static MPxComponentConverter* creator()
@@ -1079,7 +1082,9 @@ void apiMeshGeometryOverride::updateDormantVerticesItem(const MDagPath& path, MH
 		vertexItem->setDrawMode(MHWRender::MGeometry::kAll);
 
 		// Set the selection mask to kSelectMeshVerts : we want the render item to be used for Vertex Components selection
-		vertexItem->setSelectionMask( MSelectionMask::kSelectMeshVerts );
+		MSelectionMask vertexAndGravity(MSelectionMask::kSelectMeshVerts);
+		vertexAndGravity.addMask(MSelectionMask::kSelectPointsForGravity);
+		vertexItem->setSelectionMask( vertexAndGravity );
 
 		// Set depth priority higher than wireframe and shaded render items,
 		// but lower than active points.
@@ -1122,7 +1127,7 @@ void apiMeshGeometryOverride::updateDormantVerticesItem(const MDagPath& path, MH
 
 		// Generally if the display status is hilite then we
 		// draw components.
-		if (displayStatus == MHWRender::kHilite)
+		if (displayStatus == MHWRender::kHilite || pointSnappingActive())
 		{
 			// In case the object is templated
 			// we will hide the components to be consistent
@@ -1406,8 +1411,7 @@ bool apiMeshGeometryOverride::enableActiveComponentDisplay(const MDagPath &path)
 	//
 	MHWRender::DisplayStatus displayStatus =
 		MHWRender::MGeometryUtilities::displayStatus(path);
-	if (displayStatus == MHWRender::kTemplate ||
-		displayStatus == MHWRender::kActiveTemplate)
+	if ((displayStatus & (MHWRender::kHilite | MHWRender::kActiveComponent)) == 0)
 	{
 		enable = false;
 	}
@@ -3296,11 +3300,24 @@ void apiMeshGeometryOverride::updateSelectionGranularity(
 	const MDagPath& path,
 	MHWRender::MSelectionContext& selectionContext)
 {
-	MHWRender::MSelectionContext::SelectionLevel level = MHWRender::MSelectionContext::kObject;
-	if( MGlobal::selectionMode() == MGlobal::kSelectComponentMode ) {
-		level = MHWRender::MSelectionContext::kComponent;
+	MHWRender::DisplayStatus displayStatus = MHWRender::MGeometryUtilities::displayStatus(path);
+	if(displayStatus == MHWRender::kHilite)
+	{
+		MSelectionMask globalComponentMask = MGlobal::selectionMode() == MGlobal::kSelectComponentMode ? MGlobal::componentSelectionMask() : MGlobal::objectSelectionMask();
+		MSelectionMask supportedComponents(MSelectionMask::kSelectMeshVerts);
+		supportedComponents.addMask(MSelectionMask::kSelectMeshEdges);
+		supportedComponents.addMask(MSelectionMask::kSelectMeshFaces);
+		supportedComponents.addMask(MSelectionMask::kSelectPointsForGravity);
+
+		if(globalComponentMask.intersects(supportedComponents))
+		{
+			selectionContext.setSelectionLevel(MHWRender::MSelectionContext::kComponent);
+		}
 	}
-	selectionContext.setSelectionLevel(level);
+	else if (pointSnappingActive())
+	{
+		selectionContext.setSelectionLevel(MHWRender::MSelectionContext::kComponent);
+	}
 }
 
 /*
