@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <ItemGroup Label="ProjectConfigurations">
+
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+
+    <ProjectConfiguration Include="ReleaseDebug|x64">
+      <Configuration>ReleaseDebug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+
+  </ItemGroup>
+
+  <PropertyGroup Label="Globals">
+    <Keyword>Win32Proj</Keyword>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+	<Import Project="gpuCache.props" Condition="exists('gpuCache.props')" />
+  </ImportGroup>
+
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+	<Import Project="gpuCache.props" Condition="exists('gpuCache.props')" />
+  </ImportGroup>
+
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+	<Import Project="gpuCache.props" Condition="exists('gpuCache.props')" />
+  </ImportGroup>
+
+  <PropertyGroup Label="UserMacros" />
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <TargetExt>.mll</TargetExt>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>_DEBUG;WIN32;_WINDOWS;_USRDLL;NT_PLUGIN;_HAS_ITERATOR_DEBUGGING=0;_SECURE_SCL=0;_SECURE_SCL_THROWS=0;_SECURE_SCL_DEPRECATE=0;_CRT_SECURE_NO_DEPRECATE;TBB_USE_DEBUG=0;__TBB_LIB_NAME=tbb.lib;Bits64_;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.;..\..\..\include;..\..\..\..\include;..\..\Alembic\include;..\..\Alembic\include\AlembicPrivate;..\..\Alembic\include\AlembicPrivate\ilmbase;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <ProgramDataBaseFileName>$(IntDir)$(ProjectName).pdb</ProgramDataBaseFileName>
+      <Optimization>Disabled</Optimization>
+    </ClCompile>
+
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>..\..\..\lib;..\..\..\..\lib;..\..\Alembic\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OpenMaya.lib;OpenMayaUI.lib;OpenMayaAnim.lib;OpenMayaRender.lib;Foundation.lib;opengl32.lib;AlembicAbcCoreFactory.lib;AlembicAbcCoreHDF5.lib;AlembicAbcCoreOgawa.lib;AlembicAbcGeom.lib;AlembicAbc.lib;AlembicAbcCoreAbstract.lib;AlembicAbcMaterial.lib;AlembicAbcCollection.lib;AlembicOgawa.lib;AlembicUtil.lib;hdf5_hl.lib;hdf5.lib;AlembicIex.lib;AlembicHalf.lib;AlembicImath.lib;libzlib.lib;wbemuuid.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+<AdditionalOptions>/export:initializePlugin /export:uninitializePlugin %(AdditionalOptions)</AdditionalOptions>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <ImportLibrary>$(OutDir)$(TargetName).lib</ImportLibrary>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <TargetExt>.mll</TargetExt>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;WIN32;_WINDOWS;_USRDLL;NT_PLUGIN;_HAS_ITERATOR_DEBUGGING=0;_SECURE_SCL=0;_SECURE_SCL_THROWS=0;_SECURE_SCL_DEPRECATE=0;_CRT_SECURE_NO_DEPRECATE;TBB_USE_DEBUG=0;__TBB_LIB_NAME=tbb.lib;Bits64_;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.;..\..\..\include;..\..\..\..\include;..\..\Alembic\include;..\..\Alembic\include\AlembicPrivate;..\..\Alembic\include\AlembicPrivate\ilmbase;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <ProgramDataBaseFileName>$(IntDir)$(ProjectName).pdb</ProgramDataBaseFileName>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <StringPooling>true</StringPooling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+    </ClCompile>
+
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>..\..\..\lib;..\..\..\..\lib;..\..\Alembic\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OpenMaya.lib;OpenMayaUI.lib;OpenMayaAnim.lib;OpenMayaRender.lib;Foundation.lib;opengl32.lib;AlembicAbcCoreFactory.lib;AlembicAbcCoreHDF5.lib;AlembicAbcCoreOgawa.lib;AlembicAbcGeom.lib;AlembicAbc.lib;AlembicAbcCoreAbstract.lib;AlembicAbcMaterial.lib;AlembicAbcCollection.lib;AlembicOgawa.lib;AlembicUtil.lib;hdf5_hl.lib;hdf5.lib;AlembicIex.lib;AlembicHalf.lib;AlembicImath.lib;libzlib.lib;wbemuuid.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+<AdditionalOptions>/export:initializePlugin /export:uninitializePlugin %(AdditionalOptions)</AdditionalOptions>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <ImportLibrary>$(OutDir)$(TargetName).lib</ImportLibrary>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(Platform)\$(Configuration)\</OutDir>
+    <TargetExt>.mll</TargetExt>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <PreprocessorDefinitions>NDEBUG;WIN32;_WINDOWS;_USRDLL;NT_PLUGIN;_HAS_ITERATOR_DEBUGGING=0;_SECURE_SCL=0;_SECURE_SCL_THROWS=0;_SECURE_SCL_DEPRECATE=0;_CRT_SECURE_NO_DEPRECATE;TBB_USE_DEBUG=0;__TBB_LIB_NAME=tbb.lib;Bits64_;WIN32_LEAN_AND_MEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>.;..\..\..\include;..\..\..\..\include;..\..\Alembic\include;..\..\Alembic\include\AlembicPrivate;..\..\Alembic\include\AlembicPrivate\ilmbase;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <ProgramDataBaseFileName>$(IntDir)$(ProjectName).pdb</ProgramDataBaseFileName>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
+      <StringPooling>true</StringPooling>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+    </ClCompile>
+
+    <Link>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>..\..\..\lib;..\..\..\..\lib;..\..\Alembic\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>OpenMaya.lib;OpenMayaUI.lib;OpenMayaAnim.lib;OpenMayaRender.lib;Foundation.lib;opengl32.lib;AlembicAbcCoreFactory.lib;AlembicAbcCoreHDF5.lib;AlembicAbcCoreOgawa.lib;AlembicAbcGeom.lib;AlembicAbc.lib;AlembicAbcCoreAbstract.lib;AlembicAbcMaterial.lib;AlembicAbcCollection.lib;AlembicOgawa.lib;AlembicUtil.lib;hdf5_hl.lib;hdf5.lib;AlembicIex.lib;AlembicHalf.lib;AlembicImath.lib;libzlib.lib;wbemuuid.lib;tbb.lib;%(AdditionalDependencies)</AdditionalDependencies>
+<AdditionalOptions>/export:initializePlugin /export:uninitializePlugin %(AdditionalOptions)</AdditionalOptions>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <ImportLibrary>$(OutDir)$(TargetName).lib</ImportLibrary>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <ItemGroup>
+    <ClCompile Include="gpuCacheGLFT.cpp" />
+    <ClCompile Include="gpuCacheConfig.cpp" />
+    <ClCompile Include="gpuCacheVramQuery.cpp" />
+    <ClCompile Include="gpuCacheVBOProxy.cpp" />
+    <ClCompile Include="gpuCacheSample.cpp" />
+    <ClCompile Include="gpuCacheGeometry.cpp" />
+    <ClCompile Include="gpuCacheFrustum.cpp" />
+    <ClCompile Include="gpuCacheDrawTraversal.cpp" />
+    <ClCompile Include="gpuCacheMaterial.cpp" />
+    <ClCompile Include="gpuCacheMaterialNodes.cpp" />
+    <ClCompile Include="gpuCacheMaterialBakers.cpp" />
+    <ClCompile Include="gpuCacheUnitBoundingBox.cpp" />
+    <ClCompile Include="gpuCacheSelect.cpp" />
+    <ClCompile Include="gpuCacheRasterSelect.cpp" />
+    <ClCompile Include="gpuCacheGLPickingSelect.cpp" />
+    <ClCompile Include="gpuCacheShapeNode.cpp" />
+    <ClCompile Include="gpuCacheDrawOverride.cpp" />
+    <ClCompile Include="gpuCacheSubSceneOverride.cpp" />
+    <ClCompile Include="gpuCacheSpatialSubdivision.cpp" />
+    <ClCompile Include="gpuCacheSpatialGrid.cpp" />
+    <ClCompile Include="gpuCacheSpatialGridWalker.cpp" />
+    <ClCompile Include="gpuCacheIsectUtil.cpp" />
+    <ClCompile Include="gpuCacheUtil.cpp" />
+    <ClCompile Include="gpuCacheCmd.cpp" />
+    <ClCompile Include="CacheAlembicUtil.cpp" />
+    <ClCompile Include="CacheWriter.cpp" />
+    <ClCompile Include="CacheWriterAlembic.cpp" />
+    <ClCompile Include="CacheReader.cpp" />
+    <ClCompile Include="CacheReaderAlembic.cpp" />
+    <ClCompile Include="gpuCachePluginMain.cpp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClInclude Include="gpuCacheStrings.h" />
+    <ClInclude Include="gpuCacheGLFT.h" />
+    <ClInclude Include="gpuCacheConfig.h" />
+    <ClInclude Include="gpuCacheVramQuery.h" />
+    <ClInclude Include="gpuCacheVBOProxy.h" />
+    <ClInclude Include="gpuCacheMakeSharedHelper.h" />
+    <ClInclude Include="gpuCacheSample.h" />
+    <ClInclude Include="gpuCacheGeometry.h" />
+    <ClInclude Include="gpuCacheFrustum.h" />
+    <ClInclude Include="gpuCacheDrawTraversal.h" />
+    <ClInclude Include="gpuCacheMaterial.h" />
+    <ClInclude Include="gpuCacheMaterialNodes.h" />
+    <ClInclude Include="gpuCacheMaterialBakers.h" />
+    <ClInclude Include="gpuCacheUnitBoundingBox.h" />
+    <ClInclude Include="gpuCacheSelect.h" />
+    <ClInclude Include="gpuCacheRasterSelect.h" />
+    <ClInclude Include="gpuCacheGLPickingSelect.h" />
+    <ClInclude Include="gpuCacheShapeNode.h" />
+    <ClInclude Include="gpuCacheDrawOverride.h" />
+    <ClInclude Include="gpuCacheSubSceneOverride.h" />
+    <ClInclude Include="gpuCacheSpatialSubdivision.h" />
+    <ClInclude Include="gpuCacheSpatialGrid.h" />
+    <ClInclude Include="gpuCacheSpatialGridWalker.h" />
+    <ClInclude Include="gpuCacheIsectUtil.h" />
+    <ClInclude Include="gpuCacheUtil.h" />
+    <ClInclude Include="gpuCacheCmd.h" />
+    <ClInclude Include="gpuCacheTimeInterval.h" />
+    <ClInclude Include="CacheAlembicUtil.h" />
+    <ClInclude Include="CacheWriter.h" />
+    <ClInclude Include="CacheWriterAlembic.h" />
+    <ClInclude Include="CacheReader.h" />
+    <ClInclude Include="CacheReaderAlembic.h" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="AEgpuCacheRelated.mel" />
+    <None Include="AEgpuCacheTemplate.mel" />
+    <None Include="gpuCacheInitStrings.mel" />
+    <None Include="gpuCacheCreateUI.mel" />
+    <None Include="gpuCacheListModelEditorPanels.mel" />
+    <None Include="performGpuCacheImport.mel" />
+    <None Include="performGpuCacheExport.mel" />
+    <None Include="doGpuCacheImport.mel" />
+    <None Include="doGpuCacheImportArgList.mel" />
+    <None Include="doGpuCacheExportArgList.mel" />
+  </ItemGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

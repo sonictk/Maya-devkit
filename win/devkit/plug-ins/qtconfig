@@ -1,0 +1,26 @@
+TEMPLATE = lib
+
+# Maya doesn't supply debug versions of the Qt libs so we build plugins
+# in release mode.
+#
+# If you want to build a plugin in debug mode edit the generated
+# .mak.Debug file (e.g. qtForms.mak.Debug), and in the LIBS setting remove
+# the final 'd' from all of the Qt library names. For example you would change
+# 'QtGuid4.lib' to QtGui.lib'. You can then build your plugin by specifying
+# 'debug' on the NMAKE command line. E.g:
+#
+#      NMAKE /f qtForms.mak debug
+#
+# If you get a warning message about a conflict with defaultlib 'MSVCRT', just
+# ignore it.
+#
+CONFIG += qt warn_on release plugin
+
+LIBS		+= -L..\..\lib -lOpenMaya -lFoundation
+DEFINES		+= NDEBUG _WINDOWS NT_PLUGIN 
+INCLUDEPATH	+= . ../../include
+QMAKE_LFLAGS	= /export:initializePlugin /export:uninitializePlugin /SUBSYSTEM:WINDOWS
+_CFLAGS		= /FD /GS
+QMAKE_CFLAGS	+= $${_CFLAGS}
+QMAKE_CXXFLAGS	+= $${_CFLAGS}
+TARGET_EXT	= .mll

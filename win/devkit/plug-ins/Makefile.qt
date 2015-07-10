@@ -1,0 +1,80 @@
+#-
+# ==========================================================================
+# Copyright 1995,2006,2008 Autodesk, Inc. All rights reserved.
+#
+# Use of this software is subject to the terms of the Autodesk
+# license agreement provided at the time of installation or download,
+# or which otherwise accompanies this software in either electronic
+# or hard copy form.
+# ==========================================================================
+#+
+
+#	To build all of the Qt plug-ins, execute the following command:
+#
+#		nmake -f Makefile.qt
+#
+#	The plug-ins will end up in a 'release' directory beneath the current
+#	directory.
+#
+#	To build a specific Qt plug-in, give its path in the 'release' directory
+#	on the nmake command line:
+#
+#		nmake -f Makefile.qt release\qtForms.mll
+#
+#	This will also work for your own plug-in so long as there is a Qt project
+#	file (with extension '.pro') for it in the current directory. For example,
+#	let's say that you have placed the file 'myPlugin.pro' in the current
+#	directory, along with the plug-in's source code. You can build it as
+#	follows:
+#
+#		nmake -f Makefile.qt release\myPlugin.mll
+#
+#	The Qt build process will generate make files for both Debug and Release
+#	versions of a plugin. For example, qtForms.mak.Debug and
+#	qtForms.mak.Release will be created for the qtForms plug-in. Because Maya
+#	only ships with the release versions of the Qt libraries, by default this
+#	make file will only build the release versions of the plug-ins.
+#
+#	If you wish to build a debug version of a plugin you will have to modify
+#	the .mak.Debug file. If you have a locally installed copy of Qt you
+#	can change the .mak.Debug file to pick up your local copies of the Qt
+#	libraries rather than Maya's. If you don't have a locally installed copy of
+#	Qt then you will have to remove the last 'd' from all of the Qt library
+#	names (e.g. change 'QtGuid4.lib' to 'QtGui4.lib') so that they refer to the
+#	release versions rather than the debug versions. You may get a warning
+#	about a conflict with defaultlib MSVCRT, but that can be ignored.
+#
+all:	release\helixQtCmd.mll	\
+		release\qtForms.mll		\
+		release\saveSwatchesCmd.mll
+
+.SUFFIXES:	.pro .mak .mll
+
+.pro.mak:
+	qmake -makefile -o $@ $<
+
+.mak{release\}.mll:
+	$(MAKE) -nologo -f $<
+
+.pro{release\}.mll:
+	qmake -makefile -o $(<B).mak $<
+	$(MAKE) -nologo -f $(<B).mak
+
+# This rule will kick in if the .mak file already exists. Otherwise the
+# inferred rule above will kick in.
+*.mak:	$*.pro qtconfig
+	qmake -makefile -o $@ $*.pro
+
+# This rule will kick in if the .mll file already exists. Otherwise one of
+# the inferred rules above will kick in.
+release\*.mll:	$(*B).mak FORCE
+	$(MAKE) -nologo -f $(*B).mak
+
+FORCE:
+
+# This rule will clean up all created files but will leave the original
+# source files intact.
+clean:	*.pro
+	-!$(MAKE) -f $(**R).mak clean
+	-!del $(**R).mak*
+	-del /s /q release debug
