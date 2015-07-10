@@ -16,9 +16,9 @@ Maya 2016
 * [Windows](https://apps.exchange.autodesk.com/MAYA/en/Detail/Index?id=appstore.exchange.autodesk.com:autodeskmaya2016developerkit_windows64:en)
 
 
-### Boost for Alembic
+#### Boost for Alembic
 
-The Boost compressed files for Alembic is not posted on this repo due to its size is over the 
+The Boost compressed files for Alembic is not posted on this repo due to its size being over the 
 GitHub limit of 100Mb. However you can download Boost 1.55.0 from [here](http://www.boost.org/users/history/version_1_55_0.html).
 
 The boost.zip file was located in devkit/Alembic/include/AlembicPrivate
@@ -26,7 +26,7 @@ The boost.zip file was located in devkit/Alembic/include/AlembicPrivate
 
 ## Past Releases
 
-### Before Maya 2016
+#### Before Maya 2016
 Older Devkit versions were released with the Maya distributions.
 
 
