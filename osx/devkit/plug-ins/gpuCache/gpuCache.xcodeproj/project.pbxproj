@@ -1,0 +1,1413 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 44;
+	objects = {
+		014CEA520018CE5811CA2923 = {
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ZERO_LINK = YES;
+			};
+			isa = PBXBuildStyle;
+			name = Debug;
+		};
+		014CEA530018CE5811CA2923 = {
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				ZERO_LINK = NO;
+			};
+			isa = PBXBuildStyle;
+			name = Release;
+		};
+		08FB7793FE84155DC02AAC07 = {
+			buildConfigurationList = 8A7F05F1086863A70064D097;
+			buildSettings = {
+			};
+			buildStyles = (
+				014CEA520018CE5811CA2923,
+				014CEA530018CE5811CA2923,
+			);
+			hasScannedForEncodings = 1;
+			isa = PBXProject;
+			mainGroup = 08FB7794FE84155DC02AAC07;
+			projectDirPath = "";
+			targets = (
+				D2AAC0620554660B00DB518D,
+			);
+		};
+		08FB7794FE84155DC02AAC07 = {
+			children = (
+				08FB7795FE84155DC02AAC07,
+				8A7F063208688F460064D097,
+				8A7F063308688F580064D097,
+				1AB674ADFE9D54B511CA2CBB,
+			);
+			isa = PBXGroup;
+			name = gpuCachePlugin;
+			sourceTree = "<group>";
+		};
+		08FB7795FE84155DC02AAC07 = {
+			children = (
+				100000000000000000000001,
+				100000000000000000000003,
+				100000000000000000000005,
+				100000000000000000000007,
+				100000000000000000000009,
+				10000000000000000000000B,
+				10000000000000000000000D,
+				10000000000000000000000F,
+				100000000000000000000011,
+				100000000000000000000013,
+				100000000000000000000015,
+				100000000000000000000017,
+				100000000000000000000019,
+				10000000000000000000001B,
+				10000000000000000000001D,
+				10000000000000000000001F,
+				100000000000000000000021,
+				100000000000000000000023,
+				100000000000000000000025,
+				100000000000000000000027,
+				100000000000000000000029,
+				10000000000000000000002B,
+				10000000000000000000002D,
+				10000000000000000000002F,
+				100000000000000000000031,
+				100000000000000000000033,
+				100000000000000000000035,
+				100000000000000000000037,
+				100000000000000000000039,
+				10000000000000000000003B,
+				10000000000000000000003D,
+				10000000000000000000003F,
+				100000000000000000000041,
+				100000000000000000000043,
+				100000000000000000000045,
+				100000000000000000000047,
+				100000000000000000000049,
+				10000000000000000000004B,
+				10000000000000000000004D,
+				10000000000000000000004F,
+				100000000000000000000051,
+				100000000000000000000053,
+				100000000000000000000055,
+				100000000000000000000057,
+				100000000000000000000059,
+				10000000000000000000005B,
+				10000000000000000000005D,
+				10000000000000000000005F,
+				100000000000000000000061,
+				100000000000000000000063,
+				100000000000000000000065,
+				100000000000000000000067,
+				100000000000000000000069,
+				10000000000000000000006B,
+				10000000000000000000006D,
+				10000000000000000000006F,
+				100000000000000000000071,
+				100000000000000000000073,
+				100000000000000000000075,
+				100000000000000000000077,
+				100000000000000000000079,
+				10000000000000000000007B,
+			);
+			isa = PBXGroup;
+			name = Source;
+			sourceTree = "<group>";
+		};
+		100000000000000000000001 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheGLFT.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000002 = {
+			fileRef = 100000000000000000000001;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000003 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheConfig.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000004 = {
+			fileRef = 100000000000000000000003;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000005 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheVramQuery.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000006 = {
+			fileRef = 100000000000000000000005;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000007 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheVBOProxy.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000008 = {
+			fileRef = 100000000000000000000007;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000009 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheSample.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000000A = {
+			fileRef = 100000000000000000000009;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000000B = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheGeometry.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000000C = {
+			fileRef = 10000000000000000000000B;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000000D = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheFrustum.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000000E = {
+			fileRef = 10000000000000000000000D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000000F = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheDrawTraversal.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000010 = {
+			fileRef = 10000000000000000000000F;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000011 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheMaterial.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000012 = {
+			fileRef = 100000000000000000000011;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000013 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheMaterialNodes.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000014 = {
+			fileRef = 100000000000000000000013;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000015 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheMaterialBakers.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000016 = {
+			fileRef = 100000000000000000000015;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000017 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheUnitBoundingBox.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000018 = {
+			fileRef = 100000000000000000000017;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000019 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheSelect.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000001A = {
+			fileRef = 100000000000000000000019;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000001B = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheRasterSelect.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000001C = {
+			fileRef = 10000000000000000000001B;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000001D = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheGLPickingSelect.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000001E = {
+			fileRef = 10000000000000000000001D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000001F = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheShapeNode.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000020 = {
+			fileRef = 10000000000000000000001F;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000021 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheDrawOverride.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000022 = {
+			fileRef = 100000000000000000000021;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000023 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheSubSceneOverride.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000024 = {
+			fileRef = 100000000000000000000023;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000025 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheSpatialSubdivision.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000026 = {
+			fileRef = 100000000000000000000025;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000027 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheSpatialGrid.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000028 = {
+			fileRef = 100000000000000000000027;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000029 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheSpatialGridWalker.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000002A = {
+			fileRef = 100000000000000000000029;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000002B = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheIsectUtil.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000002C = {
+			fileRef = 10000000000000000000002B;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000002D = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheUtil.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000002E = {
+			fileRef = 10000000000000000000002D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000002F = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCacheCmd.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000030 = {
+			fileRef = 10000000000000000000002F;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000031 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = CacheAlembicUtil.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000032 = {
+			fileRef = 100000000000000000000031;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000033 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = CacheWriter.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000034 = {
+			fileRef = 100000000000000000000033;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000035 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = CacheWriterAlembic.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000036 = {
+			fileRef = 100000000000000000000035;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000037 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = CacheReader.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000038 = {
+			fileRef = 100000000000000000000037;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000039 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = CacheReaderAlembic.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000003A = {
+			fileRef = 100000000000000000000039;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000003B = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = gpuCachePluginMain.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000003C = {
+			fileRef = 10000000000000000000003B;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000003D = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheStrings.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000003E = {
+			fileRef = 10000000000000000000003D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000003F = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheGLFT.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000040 = {
+			fileRef = 10000000000000000000003F;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000041 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheConfig.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000042 = {
+			fileRef = 100000000000000000000041;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000043 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheVramQuery.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000044 = {
+			fileRef = 100000000000000000000043;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000045 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheVBOProxy.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000046 = {
+			fileRef = 100000000000000000000045;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000047 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheMakeSharedHelper.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000048 = {
+			fileRef = 100000000000000000000047;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000049 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheSample.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000004A = {
+			fileRef = 100000000000000000000049;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000004B = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheGeometry.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000004C = {
+			fileRef = 10000000000000000000004B;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000004D = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheFrustum.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000004E = {
+			fileRef = 10000000000000000000004D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000004F = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheDrawTraversal.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000050 = {
+			fileRef = 10000000000000000000004F;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000051 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheMaterial.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000052 = {
+			fileRef = 100000000000000000000051;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000053 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheMaterialNodes.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000054 = {
+			fileRef = 100000000000000000000053;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000055 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheMaterialBakers.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000056 = {
+			fileRef = 100000000000000000000055;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000057 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheUnitBoundingBox.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000058 = {
+			fileRef = 100000000000000000000057;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000059 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheSelect.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000005A = {
+			fileRef = 100000000000000000000059;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000005B = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheRasterSelect.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000005C = {
+			fileRef = 10000000000000000000005B;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000005D = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheGLPickingSelect.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000005E = {
+			fileRef = 10000000000000000000005D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000005F = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheShapeNode.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000060 = {
+			fileRef = 10000000000000000000005F;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000061 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheDrawOverride.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000062 = {
+			fileRef = 100000000000000000000061;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000063 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheSubSceneOverride.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000064 = {
+			fileRef = 100000000000000000000063;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000065 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheSpatialSubdivision.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000066 = {
+			fileRef = 100000000000000000000065;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000067 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheSpatialGrid.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000068 = {
+			fileRef = 100000000000000000000067;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000069 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheSpatialGridWalker.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000006A = {
+			fileRef = 100000000000000000000069;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000006B = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheIsectUtil.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000006C = {
+			fileRef = 10000000000000000000006B;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000006D = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheUtil.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000006E = {
+			fileRef = 10000000000000000000006D;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000006F = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheCmd.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000070 = {
+			fileRef = 10000000000000000000006F;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000071 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = gpuCacheTimeInterval.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000072 = {
+			fileRef = 100000000000000000000071;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000073 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = CacheAlembicUtil.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000074 = {
+			fileRef = 100000000000000000000073;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000075 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = CacheWriter.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000076 = {
+			fileRef = 100000000000000000000075;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000077 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = CacheWriterAlembic.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000078 = {
+			fileRef = 100000000000000000000077;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		100000000000000000000079 = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = CacheReader.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000007A = {
+			fileRef = 100000000000000000000079;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000007B = {
+			fileEncoding = 30;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.c.h;
+			path = CacheReaderAlembic.h;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000007C = {
+			fileRef = 10000000000000000000007B;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		10000000000000000000007D = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = text.script.mel;
+			path = AEgpuCacheRelated.mel;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000007E = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = text.script.mel;
+			path = AEgpuCacheTemplate.mel;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		10000000000000000000007F = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = text.script.mel;
+			path = gpuCacheInitStrings.mel;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000080 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = text.script.mel;
+			path = gpuCacheCreateUI.mel;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000081 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = text.script.mel;
+			path = gpuCacheListModelEditorPanels.mel;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000082 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = text.script.mel;
+			path = performGpuCacheImport.mel;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000083 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = text.script.mel;
+			path = performGpuCacheExport.mel;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000084 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = text.script.mel;
+			path = doGpuCacheImport.mel;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000085 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = text.script.mel;
+			path = doGpuCacheImportArgList.mel;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000086 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = text.script.mel;
+			path = doGpuCacheExportArgList.mel;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		1AB674ADFE9D54B511CA2CBB = {
+			children = (
+				D2AAC0630554660B00DB518D,
+			);
+			isa = PBXGroup;
+			name = Products;
+			sourceTree = "<group>";
+		};
+		8A7F05ED086863A70064D097 = {
+			buildConfigurations = (
+				8A7F05EE086863A70064D097,
+				8A7F05EF086863A70064D097,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+			isa = XCConfigurationList;
+		};
+		8A7F05EE086863A70064D097 = {
+			PRODUCT_NAME = gpuCache;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DYLIB_COMPATIBILITY_VERSION = "";
+				DYLIB_CURRENT_VERSION = "";
+				EXECUTABLE_EXTENSION = bundle;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_MASTER_OBJECT_FILE = YES;
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_STYLE = BUNDLE;
+				MACH_O_TYPE = mh_bundle;
+				PREBINDING = NO;
+				PRODUCT_NAME = gpuCache;
+				ZERO_LINK = YES;
+			};
+			isa = XCBuildConfiguration;
+			name = Debug;
+		};
+		8A7F05EF086863A70064D097 = {
+			PRODUCT_NAME = gpuCache;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				DYLIB_COMPATIBILITY_VERSION = "";
+				DYLIB_CURRENT_VERSION = "";
+				EXECUTABLE_EXTENSION = bundle;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_MASTER_OBJECT_FILE = YES;
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_STYLE = BUNDLE;
+				MACH_O_TYPE = mh_bundle;
+				PREBINDING = NO;
+				PRODUCT_NAME = gpuCache;
+				ZERO_LINK = NO;
+			};
+			isa = XCBuildConfiguration;
+			name = Release;
+		};
+		8A7F05F1086863A70064D097 = {
+			buildConfigurations = (
+				8A7F05F2086863A70064D097,
+				8A7F05F3086863A70064D097,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+			isa = XCConfigurationList;
+		};
+		8A7F05F2086863A70064D097 = {
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				CLANG_CXX_LIBRARY = "libstdc++";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					MAC_PLUGIN,
+					OSMac_,
+					REQUIRE_IOSTREAM,
+				);
+				HEADER_SEARCH_PATHS = (
+					".", "$(MAYA_DIRECTORY)/devkit/include/",
+					"$(MAYA_DIRECTORY)/devkit/Alembic/include",
+					"$(MAYA_DIRECTORY)/devkit/Alembic/include/AlembicPrivate",
+					"$(MAYA_DIRECTORY)/devkit/Alembic/include/AlembicPrivate/ilmbase",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS",
+					"$(MAYA_DIRECTORY)/devkit/Alembic/lib",
+				);
+				LIBRARY_STYLE = BUNDLE;
+				MAYA_DIRECTORY = /Applications/Autodesk/maya2016;
+				OTHER_LDFLAGS = (
+					"-Wl,-executable_path,$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS",
+					"-Wl,-exported_symbol,__Z16initializePlugin7MObject",
+					"-Wl,-exported_symbol,__Z18uninitializePlugin7MObject",
+					-lOpenMaya,
+					-lOpenMayaUI,
+					-lOpenMayaAnim,
+					-lOpenMayaRender,
+					-lFoundation,
+					-framework,
+					AGL,
+					-framework,
+					OpenGL,
+					-lAlembicAbcCoreFactory,
+					-lAlembicAbcCoreHDF5,
+					-lAlembicAbcCoreOgawa,
+					-lAlembicAbcGeom,
+					-lAlembicAbc,
+					-lAlembicAbcCoreAbstract,
+					-lAlembicAbcMaterial,
+					-lAlembicAbcCollection,
+					-lAlembicOgawa,
+					-lAlembicUtil,
+					-lhdf5_hl,
+					-lhdf5,
+					-lAlembicIex,
+					-lAlembicHalf,
+					-lAlembicImath,
+					-lzlib,
+					-ltbb,
+					-framework,
+					ApplicationServices,
+					-framework,
+					IOKit,
+				);
+			};
+			isa = XCBuildConfiguration;
+			name = Debug;
+		};
+		8A7F05F3086863A70064D097 = {
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				CLANG_CXX_LIBRARY = "libstdc++";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					MAC_PLUGIN,
+					OSMac_,
+					REQUIRE_IOSTREAM,
+				);
+				HEADER_SEARCH_PATHS = (
+					".", "$(MAYA_DIRECTORY)/devkit/include/",
+					"$(MAYA_DIRECTORY)/devkit/Alembic/include",
+					"$(MAYA_DIRECTORY)/devkit/Alembic/include/AlembicPrivate",
+					"$(MAYA_DIRECTORY)/devkit/Alembic/include/AlembicPrivate/ilmbase",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS",
+					"$(MAYA_DIRECTORY)/devkit/Alembic/lib",
+				);
+				LIBRARY_STYLE = BUNDLE;
+				MAYA_DIRECTORY = /Applications/Autodesk/maya2016;
+				OTHER_LDFLAGS = (
+					"-Wl,-executable_path,$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS",
+					"-Wl,-exported_symbol,__Z16initializePlugin7MObject",
+					"-Wl,-exported_symbol,__Z18uninitializePlugin7MObject",
+					-lOpenMaya,
+					-lOpenMayaUI,
+					-lOpenMayaAnim,
+					-lOpenMayaRender,
+					-lFoundation,
+					-framework,
+					AGL,
+					-framework,
+					OpenGL,
+					-lAlembicAbcCoreFactory,
+					-lAlembicAbcCoreHDF5,
+					-lAlembicAbcCoreOgawa,
+					-lAlembicAbcGeom,
+					-lAlembicAbc,
+					-lAlembicAbcCoreAbstract,
+					-lAlembicAbcMaterial,
+					-lAlembicAbcCollection,
+					-lAlembicOgawa,
+					-lAlembicUtil,
+					-lhdf5_hl,
+					-lhdf5,
+					-lAlembicIex,
+					-lAlembicHalf,
+					-lAlembicImath,
+					-lzlib,
+					-ltbb,
+					-framework,
+					ApplicationServices,
+					-framework,
+					IOKit,
+				);
+			};
+			isa = XCBuildConfiguration;
+			name = Release;
+		};
+		8A7F063208688F460064D097 = {
+			children = (
+				10000000000000000000007D,
+				10000000000000000000007E,
+				10000000000000000000007F,
+				100000000000000000000080,
+				100000000000000000000081,
+				100000000000000000000082,
+				100000000000000000000083,
+				100000000000000000000084,
+				100000000000000000000085,
+				100000000000000000000086,
+			);
+			isa = PBXGroup;
+			name = Mel;
+			sourceTree = "<group>";
+		};
+		8A7F063308688F580064D097 = {
+			children = (
+			);
+			isa = PBXGroup;
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		D289988505E68E00004EDB86 = {
+			buildActionMask = 2147483647;
+			files = (
+			);
+			isa = PBXFrameworksBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D2AAC0600554660B00DB518D = {
+			buildActionMask = 2147483647;
+			files = (
+				10000000000000000000003E,
+				100000000000000000000040,
+				100000000000000000000042,
+				100000000000000000000044,
+				100000000000000000000046,
+				100000000000000000000048,
+				10000000000000000000004A,
+				10000000000000000000004C,
+				10000000000000000000004E,
+				100000000000000000000050,
+				100000000000000000000052,
+				100000000000000000000054,
+				100000000000000000000056,
+				100000000000000000000058,
+				10000000000000000000005A,
+				10000000000000000000005C,
+				10000000000000000000005E,
+				100000000000000000000060,
+				100000000000000000000062,
+				100000000000000000000064,
+				100000000000000000000066,
+				100000000000000000000068,
+				10000000000000000000006A,
+				10000000000000000000006C,
+				10000000000000000000006E,
+				100000000000000000000070,
+				100000000000000000000072,
+				100000000000000000000074,
+				100000000000000000000076,
+				100000000000000000000078,
+				10000000000000000000007A,
+				10000000000000000000007C,
+			);
+			isa = PBXHeadersBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D2AAC0610554660B00DB518D = {
+			buildActionMask = 2147483647;
+			files = (
+				100000000000000000000002,
+				100000000000000000000004,
+				100000000000000000000006,
+				100000000000000000000008,
+				10000000000000000000000A,
+				10000000000000000000000C,
+				10000000000000000000000E,
+				100000000000000000000010,
+				100000000000000000000012,
+				100000000000000000000014,
+				100000000000000000000016,
+				100000000000000000000018,
+				10000000000000000000001A,
+				10000000000000000000001C,
+				10000000000000000000001E,
+				100000000000000000000020,
+				100000000000000000000022,
+				100000000000000000000024,
+				100000000000000000000026,
+				100000000000000000000028,
+				10000000000000000000002A,
+				10000000000000000000002C,
+				10000000000000000000002E,
+				100000000000000000000030,
+				100000000000000000000032,
+				100000000000000000000034,
+				100000000000000000000036,
+				100000000000000000000038,
+				10000000000000000000003A,
+				10000000000000000000003C,
+			);
+			isa = PBXSourcesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D2AAC0620554660B00DB518D = {
+			buildConfigurationList = 8A7F05ED086863A70064D097;
+			buildPhases = (
+				D2AAC0600554660B00DB518D,
+				D2AAC0610554660B00DB518D,
+				D289988505E68E00004EDB86,
+			);
+			buildRules = (
+			);
+			buildSettings = {
+				EXECUTABLE_EXTENSION = bundle;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_STYLE = BUNDLE;
+				PREBINDING = NO;
+				PRODUCT_NAME = gpuCache;
+			};
+			dependencies = (
+			);
+			isa = PBXNativeTarget;
+			name = gpuCache;
+			productName = gpuCachePlugin;
+			productReference = D2AAC0630554660B00DB518D;
+			productType = com.apple.product-type.library.dynamic;
+		};
+		D2AAC0630554660B00DB518D = {
+			explicitFileType = compiled.mach-o.dylib;
+			includeInIndex = 0;
+			isa = PBXFileReference;
+			path = gpuCache.dylib;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+	};
+	rootObject = 08FB7793FE84155DC02AAC07;
+}

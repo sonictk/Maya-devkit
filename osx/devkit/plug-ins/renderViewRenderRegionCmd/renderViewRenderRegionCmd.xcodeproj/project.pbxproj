@@ -1,0 +1,287 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 44;
+	objects = {
+		014CEA520018CE5811CA2923 = {
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ZERO_LINK = YES;
+			};
+			isa = PBXBuildStyle;
+			name = Debug;
+		};
+		014CEA530018CE5811CA2923 = {
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				ZERO_LINK = NO;
+			};
+			isa = PBXBuildStyle;
+			name = Release;
+		};
+		08FB7793FE84155DC02AAC07 = {
+			buildConfigurationList = 8A7F05F1086863A70064D097;
+			buildSettings = {
+			};
+			buildStyles = (
+				014CEA520018CE5811CA2923,
+				014CEA530018CE5811CA2923,
+			);
+			hasScannedForEncodings = 1;
+			isa = PBXProject;
+			mainGroup = 08FB7794FE84155DC02AAC07;
+			projectDirPath = "";
+			targets = (
+				D2AAC0620554660B00DB518D,
+			);
+		};
+		08FB7794FE84155DC02AAC07 = {
+			children = (
+				08FB7795FE84155DC02AAC07,
+				8A7F063208688F460064D097,
+				8A7F063308688F580064D097,
+				1AB674ADFE9D54B511CA2CBB,
+			);
+			isa = PBXGroup;
+			name = renderViewRenderRegionCmdPlugin;
+			sourceTree = "<group>";
+		};
+		08FB7795FE84155DC02AAC07 = {
+			children = (
+				100000000000000000000001,
+			);
+			isa = PBXGroup;
+			name = Source;
+			sourceTree = "<group>";
+		};
+		100000000000000000000001 = {
+			fileEncoding = 4;
+			isa = PBXFileReference;
+			lastKnownFileType = sourcecode.cpp.cpp;
+			path = renderViewRenderRegionCmd.cpp;
+			refType = 4;
+			sourceTree = "<group>";
+		};
+		100000000000000000000002 = {
+			fileRef = 100000000000000000000001;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		1AB674ADFE9D54B511CA2CBB = {
+			children = (
+				D2AAC0630554660B00DB518D,
+			);
+			isa = PBXGroup;
+			name = Products;
+			sourceTree = "<group>";
+		};
+		8A7F05ED086863A70064D097 = {
+			buildConfigurations = (
+				8A7F05EE086863A70064D097,
+				8A7F05EF086863A70064D097,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+			isa = XCConfigurationList;
+		};
+		8A7F05EE086863A70064D097 = {
+			PRODUCT_NAME = renderViewRenderRegionCmd;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DYLIB_COMPATIBILITY_VERSION = "";
+				DYLIB_CURRENT_VERSION = "";
+				EXECUTABLE_EXTENSION = bundle;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_MASTER_OBJECT_FILE = YES;
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_STYLE = BUNDLE;
+				MACH_O_TYPE = mh_bundle;
+				PREBINDING = NO;
+				PRODUCT_NAME = renderViewRenderRegionCmd;
+				ZERO_LINK = YES;
+			};
+			isa = XCBuildConfiguration;
+			name = Debug;
+		};
+		8A7F05EF086863A70064D097 = {
+			PRODUCT_NAME = renderViewRenderRegionCmd;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				DYLIB_COMPATIBILITY_VERSION = "";
+				DYLIB_CURRENT_VERSION = "";
+				EXECUTABLE_EXTENSION = bundle;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_MASTER_OBJECT_FILE = YES;
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_STYLE = BUNDLE;
+				MACH_O_TYPE = mh_bundle;
+				PREBINDING = NO;
+				PRODUCT_NAME = renderViewRenderRegionCmd;
+				ZERO_LINK = NO;
+			};
+			isa = XCBuildConfiguration;
+			name = Release;
+		};
+		8A7F05F1086863A70064D097 = {
+			buildConfigurations = (
+				8A7F05F2086863A70064D097,
+				8A7F05F3086863A70064D097,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+			isa = XCConfigurationList;
+		};
+		8A7F05F2086863A70064D097 = {
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				CLANG_CXX_LIBRARY = "libstdc++";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					MAC_PLUGIN,
+					OSMac_,
+					REQUIRE_IOSTREAM,
+				);
+				HEADER_SEARCH_PATHS = (
+					".", "$(MAYA_DIRECTORY)/devkit/include/",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS",
+				);
+				LIBRARY_STYLE = BUNDLE;
+				MAYA_DIRECTORY = /Applications/Autodesk/maya2016;
+				OTHER_LDFLAGS = (
+					"-Wl,-executable_path,$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS",
+					"-Wl,-exported_symbol,__Z16initializePlugin7MObject",
+					"-Wl,-exported_symbol,__Z18uninitializePlugin7MObject",
+					-lOpenMayaRender,
+					-lOpenMayaUI,
+					-lOpenMaya,
+					-lFoundation,
+				);
+			};
+			isa = XCBuildConfiguration;
+			name = Debug;
+		};
+		8A7F05F3086863A70064D097 = {
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				CLANG_CXX_LIBRARY = "libstdc++";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					MAC_PLUGIN,
+					OSMac_,
+					REQUIRE_IOSTREAM,
+				);
+				HEADER_SEARCH_PATHS = (
+					".", "$(MAYA_DIRECTORY)/devkit/include/",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS",
+				);
+				LIBRARY_STYLE = BUNDLE;
+				MAYA_DIRECTORY = /Applications/Autodesk/maya2016;
+				OTHER_LDFLAGS = (
+					"-Wl,-executable_path,$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS",
+					"-Wl,-exported_symbol,__Z16initializePlugin7MObject",
+					"-Wl,-exported_symbol,__Z18uninitializePlugin7MObject",
+					-lOpenMayaRender,
+					-lOpenMayaUI,
+					-lOpenMaya,
+					-lFoundation,
+				);
+			};
+			isa = XCBuildConfiguration;
+			name = Release;
+		};
+		8A7F063208688F460064D097 = {
+			children = (
+			);
+			isa = PBXGroup;
+			name = Mel;
+			sourceTree = "<group>";
+		};
+		8A7F063308688F580064D097 = {
+			children = (
+			);
+			isa = PBXGroup;
+			name = Resources;
+			sourceTree = "<group>";
+		};
+		D289988505E68E00004EDB86 = {
+			buildActionMask = 2147483647;
+			files = (
+			);
+			isa = PBXFrameworksBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D2AAC0600554660B00DB518D = {
+			buildActionMask = 2147483647;
+			files = (
+			);
+			isa = PBXHeadersBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D2AAC0610554660B00DB518D = {
+			buildActionMask = 2147483647;
+			files = (
+				100000000000000000000002,
+			);
+			isa = PBXSourcesBuildPhase;
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D2AAC0620554660B00DB518D = {
+			buildConfigurationList = 8A7F05ED086863A70064D097;
+			buildPhases = (
+				D2AAC0600554660B00DB518D,
+				D2AAC0610554660B00DB518D,
+				D289988505E68E00004EDB86,
+			);
+			buildRules = (
+			);
+			buildSettings = {
+				EXECUTABLE_EXTENSION = bundle;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_STYLE = BUNDLE;
+				PREBINDING = NO;
+				PRODUCT_NAME = renderViewRenderRegionCmd;
+			};
+			dependencies = (
+			);
+			isa = PBXNativeTarget;
+			name = renderViewRenderRegionCmd;
+			productName = renderViewRenderRegionCmdPlugin;
+			productReference = D2AAC0630554660B00DB518D;
+			productType = com.apple.product-type.library.dynamic;
+		};
+		D2AAC0630554660B00DB518D = {
+			explicitFileType = compiled.mach-o.dylib;
+			includeInIndex = 0;
+			isa = PBXFileReference;
+			path = renderViewRenderRegionCmd.dylib;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+	};
+	rootObject = 08FB7793FE84155DC02AAC07;
+}

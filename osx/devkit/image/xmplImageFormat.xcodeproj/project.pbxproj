@@ -1,0 +1,390 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 42;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		23E31304090515590029842D /* xmplImageFormat.c in Sources */ = {isa = PBXBuildFile; fileRef = 23E31302090515590029842D /* xmplImageFormat.c */; };
+		23E31305090515590029842D /* xmplImageFormat.h in Headers */ = {isa = PBXBuildFile; fileRef = 23E31303090515590029842D /* xmplImageFormat.h */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXBuildRule section */
+		8A7F060B0868682B0064D097 /* PBXBuildRule */ = {
+			isa = PBXBuildRule;
+			compilerSpec = com.apple.compilers.gcc.3_3;
+			fileType = sourcecode.c;
+			isEditable = 1;
+			outputFiles = (
+			);
+		};
+/* End PBXBuildRule section */
+
+/* Begin PBXBuildStyle section */
+		014CEA520018CE5811CA2923 /* Debug */ = {
+			isa = PBXBuildStyle;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ZERO_LINK = YES;
+			};
+			name = Debug;
+		};
+		014CEA530018CE5811CA2923 /* Release */ = {
+			isa = PBXBuildStyle;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+/* End PBXBuildStyle section */
+
+/* Begin PBXFileReference section */
+		23E31302090515590029842D /* xmplImageFormat.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = xmplImageFormat.c; sourceTree = "<group>"; };
+		23E31303090515590029842D /* xmplImageFormat.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = xmplImageFormat.h; sourceTree = "<group>"; };
+		23E31328090518350029842D /* IMFImageFormat.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = IMFImageFormat.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D289988505E68E00004EDB86 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		08FB7794FE84155DC02AAC07 /* apiMeshShapePlugin */ = {
+			isa = PBXGroup;
+			children = (
+				08FB7795FE84155DC02AAC07 /* Source */,
+				8A7F063208688F460064D097 /* Mel */,
+				8A7F063308688F580064D097 /* Resources */,
+				1AB674ADFE9D54B511CA2CBB /* Products */,
+			);
+			name = apiMeshShapePlugin;
+			sourceTree = "<group>";
+		};
+		08FB7795FE84155DC02AAC07 /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				23E31302090515590029842D /* xmplImageFormat.c */,
+				23E31303090515590029842D /* xmplImageFormat.h */,
+			);
+			name = Source;
+			sourceTree = "<group>";
+		};
+		1AB674ADFE9D54B511CA2CBB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				23E31328090518350029842D /* IMFImageFormat.dylib */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		8A7F063208688F460064D097 /* Mel */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Mel;
+			sourceTree = "<group>";
+		};
+		8A7F063308688F580064D097 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		D2AAC0600554660B00DB518D /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				23E31305090515590029842D /* xmplImageFormat.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		D2AAC0620554660B00DB518D /* IMFImageFormat */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8A7F05ED086863A70064D097 /* Build configuration list for PBXNativeTarget "IMFImageFormat" */;
+			buildPhases = (
+				D2AAC0600554660B00DB518D /* Headers */,
+				D2AAC0610554660B00DB518D /* Sources */,
+				D289988505E68E00004EDB86 /* Frameworks */,
+				8A7F063408688F870064D097 /* ShellScript */,
+			);
+			buildRules = (
+				8A7F060B0868682B0064D097 /* PBXBuildRule */,
+			);
+			buildSettings = {
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_STYLE = DYNAMIC;
+				PREBINDING = NO;
+				PRODUCT_NAME = apiMeshShape;
+			};
+			dependencies = (
+			);
+			name = IMFImageFormat;
+			productName = apiMeshShapePlugin;
+			productReference = 23E31328090518350029842D /* IMFImageFormat.dylib */;
+			productType = "com.apple.product-type.library.dynamic";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		08FB7793FE84155DC02AAC07 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 8A7F05F1086863A70064D097 /* Build configuration list for PBXProject "xmplImageFormat" */;
+			buildSettings = {
+			};
+			buildStyles = (
+				014CEA520018CE5811CA2923 /* Debug */,
+				014CEA530018CE5811CA2923 /* Release */,
+			);
+			hasScannedForEncodings = 1;
+			mainGroup = 08FB7794FE84155DC02AAC07 /* apiMeshShapePlugin */;
+			projectDirPath = "";
+			targets = (
+				D2AAC0620554660B00DB518D /* IMFImageFormat */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		8A7F063408688F870064D097 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				$TARGET_BUILD_DIR/$EXECUTABLE_PATH,
+			);
+			outputPaths = (
+				$TARGET_BUILD_DIR/$PRODUCT_NAME.lib,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "cp \"$TARGET_BUILD_DIR/$EXECUTABLE_PATH\" \"$TARGET_BUILD_DIR/$PRODUCT_NAME.lib\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D2AAC0610554660B00DB518D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				23E31304090515590029842D /* xmplImageFormat.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		8A7F05EE086863A70064D097 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_STYLE = DYNAMIC;
+				MAYA_DIRECTORY = /Applications/Alias/maya8.0;
+				OTHER_LDFLAGS = (
+					"-lImage",
+					"-lIMF",
+					"-Wl,-executable_path,$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS",
+					"-lImage",
+					"-lIMF",
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = IMFImageFormat;
+				ZERO_LINK = YES;
+			};
+			name = Debug;
+		};
+		8A7F05EF086863A70064D097 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G4;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_STYLE = DYNAMIC;
+				MAYA_DIRECTORY = /Applications/Alias/maya8.0;
+				OTHER_LDFLAGS = (
+					"-lImage",
+					"-lIMF",
+					"-Wl,-executable_path,$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS",
+					"-lImage",
+					"-lIMF",
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = IMFImageFormat;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+		8A7F05F0086863A70064D097 /* Default */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				INSTALL_PATH = /usr/local/lib;
+				LIBRARY_STYLE = DYNAMIC;
+				OTHER_LDFLAGS = (
+					"-lImage",
+					"-lIMF",
+					"-Wl,-executable_path,$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS",
+					"-lImage",
+					"-lIMF",
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = IMFImageFormat;
+			};
+			name = Default;
+		};
+		8A7F05F2086863A70064D097 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					MAC_PLUGIN,
+					OSMac_,
+					REQUIRE_IOSTREAM,
+				);
+				HEADER_SEARCH_PATHS = "$(MAYA_DIRECTORY)/devkit/include/";
+				LIBRARY_SEARCH_PATHS = "$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS";
+				MAYA_DIRECTORY = /Applications/Alias/maya8.0;
+				OTHER_LDFLAGS = (
+					"-lOpenMaya",
+					"-lFoundation",
+					"-Wl,-executable_path,$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS",
+					"-lOpenMaya",
+					"-lOpenMayaUI",
+					"-lFoundation",
+					"-framework",
+					AGL,
+					"-framework",
+					OpenGL,
+				);
+			};
+			name = Debug;
+		};
+		8A7F05F3086863A70064D097 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					MAC_PLUGIN,
+					OSMac_,
+					REQUIRE_IOSTREAM,
+				);
+				HEADER_SEARCH_PATHS = "$(MAYA_DIRECTORY)/devkit/include/";
+				LIBRARY_SEARCH_PATHS = "$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS";
+				MAYA_DIRECTORY = /Applications/Alias/maya8.0;
+				OTHER_LDFLAGS = (
+					"-lOpenMaya",
+					"-lFoundation",
+					"-Wl,-executable_path,$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS",
+					"-lOpenMaya",
+					"-lOpenMayaUI",
+					"-lFoundation",
+					"-framework",
+					AGL,
+					"-framework",
+					OpenGL,
+				);
+			};
+			name = Release;
+		};
+		8A7F05F4086863A70064D097 /* Default */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					MAC_PLUGIN,
+					OSMac_,
+					REQUIRE_IOSTREAM,
+				);
+				HEADER_SEARCH_PATHS = "$(MAYA_DIRECTORY)/devkit/include/";
+				LIBRARY_SEARCH_PATHS = "$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS";
+				MAYA_DIRECTORY = /Applications/Alias/maya8.0;
+				OTHER_LDFLAGS = (
+					"-lOpenMaya",
+					"-lFoundation",
+					"-Wl,-executable_path,$(MAYA_DIRECTORY)/Maya.app/Contents/MacOS",
+					"-lOpenMaya",
+					"-lOpenMayaUI",
+					"-lFoundation",
+					"-framework",
+					AGL,
+					"-framework",
+					OpenGL,
+				);
+			};
+			name = Default;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		8A7F05ED086863A70064D097 /* Build configuration list for PBXNativeTarget "IMFImageFormat" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8A7F05EE086863A70064D097 /* Debug */,
+				8A7F05EF086863A70064D097 /* Release */,
+				8A7F05F0086863A70064D097 /* Default */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8A7F05F1086863A70064D097 /* Build configuration list for PBXProject "xmplImageFormat" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8A7F05F2086863A70064D097 /* Debug */,
+				8A7F05F3086863A70064D097 /* Release */,
+				8A7F05F4086863A70064D097 /* Default */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 08FB7793FE84155DC02AAC07 /* Project object */;
+}
