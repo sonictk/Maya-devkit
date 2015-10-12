@@ -55,6 +55,11 @@ Older Devkit versions were released with the Maya distributions.
 
 ## License
 
-This devkits are licensed under the terms of the [AUTODESK EXCHANGE APPS – END USER LICENSE AGREEMENT](https://apps.exchange.autodesk.com/en/eula). 
-Please see the [LICENSE](LICENSE) file for full details.
+This devkits are licensed under the terms of the [AUTODESK LICENSE AND SERVICES AGREEMENT](Autodesk EULA.pdf).
+
+Licensees of Autodesk® Maya® may license this Maya development kit as part of the Licensed Materials as defined in and pursuant
+to the attached License and Services Agreement (“LSA”).  If you are not a licensee of Autodesk® Maya® you may not license or use
+this software.  Note that Section 1.11 of the LSA permits you to use API Information and development materials for your own internal 
+development purposes, and Section 10.2.1 of the LSA permits you to reproduce and distribute certain defined Redistributable 
+Components together with your application provided that you strictly comply with the restrictions set forth in Section 10.2.1(a)-(i).
 
